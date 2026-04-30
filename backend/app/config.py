@@ -18,7 +18,7 @@ class Settings(BaseSettings):
     TWILIO_PHONE_NUMBER: str = ""
 
     ANTHROPIC_API_KEY: str = ""
-    CLAUDE_MODEL: str = "claude-sonnet-4-5-20250514"
+    CLAUDE_MODEL: str = "claude-sonnet-4-5-20241022"
 
     ENCRYPTION_KEY: str = ""
 
