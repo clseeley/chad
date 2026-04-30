@@ -209,8 +209,9 @@ async def generate_plan(
     try:
         plan = await coach.generate_plan(user.id)
     except Exception as e:
-        log.error("plan_generation_failed", user_id=str(user.id), error=str(e))
-        raise HTTPException(status_code=500, detail="Plan generation failed. Please try again.")
+        import traceback
+        log.error("plan_generation_failed", user_id=str(user.id), error=str(e), traceback=traceback.format_exc())
+        raise HTTPException(status_code=500, detail=f"Plan generation failed: {e}")
 
     return {
         "id": str(plan.id),
