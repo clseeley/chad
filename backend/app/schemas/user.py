@@ -3,7 +3,13 @@ from __future__ import annotations
 from datetime import date
 from typing import Any, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
+
+
+def _empty_str_to_none(v: Any) -> Any:
+    if v == "":
+        return None
+    return v
 
 
 class UserUpdate(BaseModel):
@@ -25,6 +31,11 @@ class GoalCreate(BaseModel):
     target_value: Optional[dict] = None
     priority: int = 1
 
+    @field_validator("target_date", "sport", "description", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: Any) -> Any:
+        return _empty_str_to_none(v)
+
 
 class GoalUpdate(BaseModel):
     goal_type: Optional[str] = None
@@ -35,6 +46,11 @@ class GoalUpdate(BaseModel):
     target_value: Optional[dict] = None
     priority: Optional[int] = None
     status: Optional[str] = None
+
+    @field_validator("target_date", "sport", "description", mode="before")
+    @classmethod
+    def empty_str_to_none(cls, v: Any) -> Any:
+        return _empty_str_to_none(v)
 
 
 class GoalResponse(BaseModel):
