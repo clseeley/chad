@@ -21,23 +21,28 @@ function groupByWeek(workouts: PlannedWorkout[]): Record<number, PlannedWorkout[
   return weeks;
 }
 
-function getWeekStartDate(planStart: string, weekNumber: number): Date {
-  const start = new Date(planStart + "T00:00:00");
-  const d = new Date(start);
-  d.setDate(d.getDate() + (weekNumber - 1) * 7);
-  return d;
+function getTodayStr(): string {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
-function isToday(planStart: string, weekNumber: number, dayIdx: number): boolean {
-  const weekStart = getWeekStartDate(planStart, weekNumber);
-  const d = new Date(weekStart);
-  d.setDate(d.getDate() + dayIdx);
-  const now = new Date();
-  return (
-    d.getFullYear() === now.getFullYear() &&
-    d.getMonth() === now.getMonth() &&
-    d.getDate() === now.getDate()
+function dayHasDate(workouts: PlannedWorkout[], todayStr: string, weekNum: number, dayIdx: number): boolean {
+  return workouts.some(
+    (w) => w.week_number === weekNum && w.day_of_week === dayIdx && w.scheduled_date === todayStr
   );
+}
+
+function isDayToday(planStart: string, weekNum: number, dayIdx: number, todayStr: string, allWorkouts: PlannedWorkout[]): boolean {
+  if (dayHasDate(allWorkouts, todayStr, weekNum, dayIdx)) return true;
+  const start = new Date(planStart + "T00:00:00");
+  start.setDate(start.getDate() + (weekNum - 1) * 7 + dayIdx);
+  const y = start.getFullYear();
+  const m = String(start.getMonth() + 1).padStart(2, "0");
+  const d = String(start.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}` === todayStr;
 }
 
 export default function TrainingPlanPage() {
@@ -124,6 +129,7 @@ export default function TrainingPlanPage() {
   const weekNumbers = Object.keys(weeks)
     .map(Number)
     .sort((a, b) => a - b);
+  const todayStr = getTodayStr();
 
   return (
     <div className="page page-wide">
@@ -139,7 +145,7 @@ export default function TrainingPlanPage() {
                   const dayWorkouts = (weeks[wk] || []).filter(
                     (w) => w.day_of_week === dayIdx
                   );
-                  const today = isToday(plan.start_date, wk, dayIdx);
+                  const today = isDayToday(plan.start_date, wk, dayIdx, todayStr, plan.workouts);
 
                   return (
                     <div key={dayIdx} className={`week-day ${today ? "today" : ""}`}>
