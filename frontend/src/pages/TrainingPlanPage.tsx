@@ -21,6 +21,25 @@ function groupByWeek(workouts: PlannedWorkout[]): Record<number, PlannedWorkout[
   return weeks;
 }
 
+function getWeekStartDate(planStart: string, weekNumber: number): Date {
+  const start = new Date(planStart + "T00:00:00");
+  const d = new Date(start);
+  d.setDate(d.getDate() + (weekNumber - 1) * 7);
+  return d;
+}
+
+function isToday(planStart: string, weekNumber: number, dayIdx: number): boolean {
+  const weekStart = getWeekStartDate(planStart, weekNumber);
+  const d = new Date(weekStart);
+  d.setDate(d.getDate() + dayIdx);
+  const now = new Date();
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  );
+}
+
 export default function TrainingPlanPage() {
   const [plan, setPlan] = useState<TrainingPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -45,6 +64,24 @@ export default function TrainingPlanPage() {
       alert("Plan generation failed. Make sure you have goals set up.");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleToggleComplete = async (workoutId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      const { data } = await client.patch(`/training/workouts/${workoutId}/toggle`);
+      setPlan((prev) => {
+        if (!prev) return prev;
+        return {
+          ...prev,
+          workouts: prev.workouts.map((w) =>
+            w.id === workoutId ? { ...w, completed: data.completed } : w
+          ),
+        };
+      });
+    } catch {
+      // ignore
     }
   };
 
@@ -102,10 +139,14 @@ export default function TrainingPlanPage() {
                   const dayWorkouts = (weeks[wk] || []).filter(
                     (w) => w.day_of_week === dayIdx
                   );
+                  const today = isToday(plan.start_date, wk, dayIdx);
 
                   return (
-                    <div key={dayIdx} className="week-day">
-                      <div className="day-label">{day}</div>
+                    <div key={dayIdx} className={`week-day ${today ? "today" : ""}`}>
+                      <div className="day-label">
+                        {day}
+                        {today && <span className="today-dot" />}
+                      </div>
                       {dayWorkouts.length === 0 ? (
                         <div className="day-rest">Rest</div>
                       ) : (
@@ -121,7 +162,13 @@ export default function TrainingPlanPage() {
                             }
                           >
                             <div className="workout-title">
-                              {w.completed && <span className="check">&#10003;</span>}
+                              <button
+                                className={`workout-check ${w.completed ? "checked" : ""}`}
+                                onClick={(e) => handleToggleComplete(w.id, e)}
+                                title={w.completed ? "Mark incomplete" : "Mark complete"}
+                              >
+                                {w.completed ? "✓" : ""}
+                              </button>
                               {w.title}
                             </div>
                             {expanded === w.id && (
@@ -141,15 +188,15 @@ export default function TrainingPlanPage() {
         </div>
 
         <div className="plan-sidebar">
-          {plan.description && (
-            <p className="muted" style={{ marginBottom: "1rem" }}>{plan.description}</p>
-          )}
-
-          <div className="plan-meta">
-            <span>
-              {plan.start_date} — {plan.end_date}
-            </span>
-            {plan.phase && <span className="phase-badge">{plan.phase}</span>}
+          <div className="sidebar-card">
+            <h4>Plan Details</h4>
+            {plan.description && (
+              <p style={{ marginBottom: "0.75rem", lineHeight: 1.6 }}>{plan.description}</p>
+            )}
+            <div className="plan-meta">
+              <span>{plan.start_date} &mdash; {plan.end_date}</span>
+              {plan.phase && <span className="phase-badge">{plan.phase}</span>}
+            </div>
           </div>
 
           {plan.rationale && (

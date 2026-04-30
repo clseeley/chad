@@ -18,6 +18,7 @@ from app.models.activity import Activity
 from app.models.strava_token import StravaToken
 from app.models.training_plan import TrainingPlan
 from app.models.user import User
+from app.models.workout import PlannedWorkout
 from app.schemas.training import ActivityResponse, TrainingPlanResponse, WorkoutResponse
 from app.services.activity_service import SPORT_TYPE_MAP
 
@@ -112,6 +113,32 @@ async def get_plan_week(
         for w in plan.workouts
         if week_start <= w.scheduled_date <= week_end
     ]
+
+
+@router.patch("/workouts/{workout_id}/toggle")
+async def toggle_workout_complete(
+    workout_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        wid = uuid.UUID(workout_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid workout ID")
+
+    result = await db.execute(
+        select(PlannedWorkout).where(
+            and_(PlannedWorkout.id == wid, PlannedWorkout.user_id == user.id)
+        )
+    )
+    workout = result.scalar_one_or_none()
+    if not workout:
+        raise HTTPException(status_code=404, detail="Workout not found")
+
+    workout.completed = not workout.completed
+    await db.commit()
+
+    return {"id": str(workout.id), "completed": workout.completed}
 
 
 @router.get("/activities")
