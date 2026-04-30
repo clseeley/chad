@@ -30,11 +30,34 @@ export default function OnboardingPage() {
   // Plan generation
   const [generating, setGenerating] = useState(false);
   const [planReady, setPlanReady] = useState(false);
+  const [planRationale, setPlanRationale] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   useEffect(() => {
     client.get("/strava/status").then(({ data }) => {
       setStravaConnected(data.connected);
     });
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("strava") === "connected") {
+      setStravaConnected(true);
+      window.history.replaceState({}, "", window.location.pathname);
+      setSyncing(true);
+      client.post("/strava/sync").then(() => {
+        const poll = setInterval(() => {
+          client.get("/training/activities?limit=1").then(({ data }) => {
+            if (data && data.length > 0) {
+              clearInterval(poll);
+              setSyncing(false);
+            }
+          });
+        }, 2000);
+        setTimeout(() => {
+          clearInterval(poll);
+          setSyncing(false);
+        }, 60000);
+      });
+    }
   }, []);
 
   const handleProfileSave = async (e: FormEvent) => {
@@ -86,7 +109,8 @@ export default function OnboardingPage() {
   const handleGeneratePlan = async () => {
     setGenerating(true);
     try {
-      await client.post("/training/generate");
+      const { data } = await client.post("/training/generate");
+      setPlanRationale(data.rationale || null);
       setPlanReady(true);
     } catch {
       alert("Plan generation failed. Please try again.");
@@ -179,9 +203,18 @@ export default function OnboardingPage() {
               connected={stravaConnected}
               onDisconnect={() => setStravaConnected(false)}
             />
+            {syncing && (
+              <p className="muted" style={{ marginTop: "1rem" }}>
+                Syncing your activities from Strava...
+              </p>
+            )}
             <div className="onboarding-actions">
-              <button onClick={handleStravaNext} className="btn-primary">
-                {stravaConnected ? "Continue" : "Skip for now"}
+              <button
+                onClick={handleStravaNext}
+                disabled={!stravaConnected || syncing}
+                className="btn-primary"
+              >
+                Continue
               </button>
             </div>
           </div>
@@ -279,8 +312,8 @@ export default function OnboardingPage() {
           <div className="onboarding-card" style={{ textAlign: "center" }}>
             <h2>Generate Your Plan</h2>
             <p className="muted" style={{ marginBottom: "1.5rem" }}>
-              Chad will analyze your goals{stravaConnected ? " and Strava data" : ""} to
-              build a personalized training plan.
+              Chad will analyze your goals and Strava data to build a
+              personalized training plan.
             </p>
 
             {!planReady ? (
@@ -301,9 +334,17 @@ export default function OnboardingPage() {
               </>
             ) : (
               <>
-                <p style={{ marginBottom: "1.5rem", color: "var(--success)", fontWeight: 600 }}>
+                <p style={{ marginBottom: "1rem", color: "var(--success)", fontWeight: 600 }}>
                   Your training plan is ready!
                 </p>
+                {planRationale && (
+                  <div className="rationale-card" style={{ textAlign: "left", marginBottom: "1.5rem" }}>
+                    <div className="rationale-toggle" style={{ cursor: "default" }}>
+                      <span>Coach's Notes</span>
+                    </div>
+                    <div className="rationale-body">{planRationale}</div>
+                  </div>
+                )}
                 <button onClick={handleFinish} className="btn-primary" style={{ fontSize: "1.1rem", padding: "0.875rem 2rem" }}>
                   Go to Dashboard
                 </button>

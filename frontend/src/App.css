@@ -1279,3 +1279,40 @@ body {
     padding-bottom: 4rem;
   }
 }
+
+/* Rationale / Coach's Notes */
+.rationale-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.rationale-toggle {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.875rem 1.25rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text);
+  user-select: none;
+}
+
+.rationale-chevron {
+  font-size: 0.75rem;
+  transition: transform 0.2s;
+}
+
+.rationale-chevron.open {
+  transform: rotate(180deg);
+}
+
+.rationale-body {
+  padding: 0 1.25rem 1.25rem;
+  color: var(--text-muted);
+  line-height: 1.7;
+  white-space: pre-line;
+  font-size: 0.9rem;
+}

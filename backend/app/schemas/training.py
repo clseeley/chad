@@ -31,6 +31,7 @@ class TrainingPlanResponse(BaseModel):
     end_date: date
     phase: Optional[str]
     status: str
+    rationale: Optional[str]
     workouts: List[WorkoutResponse]
 
     class Config:

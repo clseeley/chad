@@ -57,7 +57,14 @@ You have tools available to look up athlete data, modify plans, and log notes. U
 
 PLAN_GENERATION_PROMPT = """Based on the athlete context provided, generate a complete training plan.
 
-Output a JSON object with this exact structure:
+First, write a coaching rationale inside <rationale> tags. Address the athlete by name. Cover:
+- Your assessment of their current fitness based on their Strava data
+- Why you structured the plan this way given where they are now
+- How the plan progresses from their current level
+- Any risks you're managing (injury, overtraining, under-recovery)
+- Key milestones or checkpoints in the plan
+
+Then, output the training plan as JSON inside <plan_json> tags with this exact structure:
 {
   "name": "Plan name",
   "description": "Brief description",
@@ -111,6 +118,7 @@ Constraints:
 - Deload every 3rd or 4th week (reduce volume by 30-40%, maintain intensity)
 - Progress running volume by no more than 10% per week
 - If a race goal exists, taper in the final 2-3 weeks
+- Reference specific numbers from their training data (weekly mileage, paces, HR zones) in the rationale
 
-Output ONLY the JSON object, no other text.
+Output ONLY the <rationale> and <plan_json> sections, no other text.
 """

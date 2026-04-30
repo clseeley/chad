@@ -76,7 +76,8 @@ async def strava_callback(
     await db.commit()
 
     from urllib.parse import urlencode
-    redirect_url = f"{settings.FRONTEND_URL}/settings?{urlencode({'strava': 'connected'})}"
+    page = "onboarding" if not user.onboarding_complete else "settings"
+    redirect_url = f"{settings.FRONTEND_URL}/{page}?{urlencode({'strava': 'connected'})}"
     from starlette.responses import RedirectResponse
     return RedirectResponse(url=redirect_url)
 

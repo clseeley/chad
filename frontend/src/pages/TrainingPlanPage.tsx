@@ -26,6 +26,7 @@ export default function TrainingPlanPage() {
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [rationaleOpen, setRationaleOpen] = useState(false);
 
   useEffect(() => {
     client
@@ -111,6 +112,21 @@ export default function TrainingPlanPage() {
         </span>
         {plan.phase && <span className="phase-badge">{plan.phase}</span>}
       </div>
+
+      {plan.rationale && (
+        <div className="rationale-card">
+          <button
+            className="rationale-toggle"
+            onClick={() => setRationaleOpen(!rationaleOpen)}
+          >
+            <span>Coach's Notes</span>
+            <span className={`rationale-chevron ${rationaleOpen ? "open" : ""}`}>&#9662;</span>
+          </button>
+          {rationaleOpen && (
+            <div className="rationale-body">{plan.rationale}</div>
+          )}
+        </div>
+      )}
 
       <div className="plan-weeks">
         {weekNumbers.map((wk) => (

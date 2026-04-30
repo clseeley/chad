@@ -15,6 +15,7 @@ from app.agent.coach import ChadCoach
 from app.database import get_db
 from app.dependencies import get_current_user
 from app.models.activity import Activity
+from app.models.strava_token import StravaToken
 from app.models.training_plan import TrainingPlan
 from app.models.user import User
 from app.schemas.training import ActivityResponse, TrainingPlanResponse, WorkoutResponse
@@ -51,6 +52,7 @@ async def get_active_plan(
         end_date=plan.end_date,
         phase=plan.phase,
         status=plan.status,
+        rationale=plan.rationale,
         workouts=[
             WorkoutResponse(
                 id=str(w.id),
@@ -286,6 +288,15 @@ async def generate_plan(
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    result = await db.execute(
+        select(StravaToken).where(StravaToken.user_id == user.id)
+    )
+    if not result.scalar_one_or_none():
+        raise HTTPException(
+            status_code=400,
+            detail="Connect Strava before generating a plan",
+        )
+
     coach = ChadCoach(db)
     try:
         plan = await coach.generate_plan(user.id)
@@ -301,4 +312,5 @@ async def generate_plan(
         "start_date": str(plan.start_date),
         "end_date": str(plan.end_date),
         "status": plan.status,
+        "rationale": plan.rationale,
     }

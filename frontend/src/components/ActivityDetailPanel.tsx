@@ -20,19 +20,8 @@ interface ActivityDetail {
   max_heartrate: number | null;
   suffer_score: number | null;
   calories: number | null;
-  splits: SplitData[] | null;
   laps: LapData[] | null;
   polyline: string | null;
-}
-
-interface SplitData {
-  distance: number;
-  elapsed_time: number;
-  moving_time: number;
-  average_speed: number;
-  average_heartrate?: number;
-  elevation_difference?: number;
-  split: number;
 }
 
 interface LapData {
@@ -335,38 +324,6 @@ export default function ActivityDetailPanel({
                 </div>
               )}
             </div>
-
-            {detail.splits && detail.splits.length > 1 && (
-              <div className="detail-section">
-                <h4>Splits</h4>
-                <table className="detail-table">
-                  <thead>
-                    <tr>
-                      <th>{imperial ? "Mile" : "KM"}</th>
-                      <th>Pace</th>
-                      <th>Time</th>
-                      {detail.splits.some((s) => s.average_heartrate) && <th>HR</th>}
-                      {detail.splits.some((s) => s.elevation_difference) && <th>Elev</th>}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {detail.splits.map((s) => (
-                      <tr key={s.split}>
-                        <td>{s.split}</td>
-                        <td>{formatPace(s.average_speed, imperial)}</td>
-                        <td>{formatDuration(s.moving_time)}</td>
-                        {detail.splits!.some((sp) => sp.average_heartrate) && (
-                          <td>{s.average_heartrate ? Math.round(s.average_heartrate) : "--"}</td>
-                        )}
-                        {detail.splits!.some((sp) => sp.elevation_difference) && (
-                          <td>{formatElevation(s.elevation_difference ?? null, imperial)}</td>
-                        )}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
 
             {detail.laps && detail.laps.length > 1 && (
               <div className="detail-section">

@@ -46,7 +46,9 @@ class ChadCoach:
         return response_text
 
     async def generate_plan(self, user_id: uuid.UUID) -> TrainingPlan:
-        ctx = await self.context_builder.build(user_id, include_plan=False, include_history=False)
+        ctx = await self.context_builder.build(
+            user_id, include_plan=False, include_history=False, full_profile=True
+        )
         context_text = format_context_for_prompt(ctx)
 
         messages = [
@@ -68,9 +70,9 @@ class ChadCoach:
         if response.stop_reason == "max_tokens":
             log.warning("plan_truncated", user_id=str(user_id), length=len(raw_text))
 
-        plan_data = self._parse_plan_json(raw_text)
+        rationale, plan_data = self._parse_plan_response(raw_text)
 
-        plan = await self._save_plan(user_id, plan_data, ctx)
+        plan = await self._save_plan(user_id, plan_data, ctx, rationale=rationale)
         await self.db.commit()
 
         log.info("plan_generated", user_id=str(user_id), plan_id=str(plan.id),
@@ -218,6 +220,23 @@ class ChadCoach:
         self.db.add(msg)
         await self.db.flush()
 
+    def _parse_plan_response(self, raw: str) -> tuple:
+        rationale = None
+        plan_json_text = raw
+
+        if "<rationale>" in raw and "</rationale>" in raw:
+            start = raw.index("<rationale>") + len("<rationale>")
+            end = raw.index("</rationale>")
+            rationale = raw[start:end].strip()
+
+        if "<plan_json>" in raw:
+            start = raw.index("<plan_json>") + len("<plan_json>")
+            end = raw.index("</plan_json>") if "</plan_json>" in raw else len(raw)
+            plan_json_text = raw[start:end].strip()
+
+        plan_data = self._parse_plan_json(plan_json_text)
+        return rationale, plan_data
+
     def _parse_plan_json(self, raw: str) -> dict:
         text = raw.strip()
         if text.startswith("```"):
@@ -230,25 +249,22 @@ class ChadCoach:
         try:
             return json.loads(text)
         except json.JSONDecodeError:
-            # Attempt to repair truncated JSON by closing open structures
             repaired = text
             open_braces = repaired.count("{") - repaired.count("}")
             open_brackets = repaired.count("[") - repaired.count("]")
-            # Trim back to last complete item (remove trailing partial string/value)
             last_complete = max(repaired.rfind("},"), repaired.rfind("}]"))
             if last_complete > 0:
                 repaired = repaired[:last_complete + 1]
             repaired += "]" * open_brackets + "}" * open_braces
-            # Recount after trim
             open_braces = repaired.count("{") - repaired.count("}")
             open_brackets = repaired.count("[") - repaired.count("]")
             repaired += "]" * open_brackets + "}" * open_braces
             return json.loads(repaired)
 
     async def _save_plan(
-        self, user_id: uuid.UUID, plan_data: dict, ctx: AthleteContext
+        self, user_id: uuid.UUID, plan_data: dict, ctx: AthleteContext,
+        rationale: Optional[str] = None,
     ) -> TrainingPlan:
-        # Deactivate any existing active plans
         result = await self.db.execute(
             select(TrainingPlan).where(
                 and_(TrainingPlan.user_id == user_id, TrainingPlan.status == "active")
@@ -256,6 +272,13 @@ class ChadCoach:
         )
         for old_plan in result.scalars().all():
             old_plan.status = "superseded"
+
+        gen_context = {
+            "goals": ctx.goals,
+            "fitness_summary": ctx.fitness_summary,
+        }
+        if ctx.fitness_profile:
+            gen_context["fitness_profile"] = ctx.fitness_profile
 
         plan = TrainingPlan(
             user_id=user_id,
@@ -265,11 +288,9 @@ class ChadCoach:
             end_date=date.fromisoformat(plan_data["end_date"]),
             phase=plan_data.get("phases", [{}])[0].get("name") if plan_data.get("phases") else None,
             plan_json=plan_data,
+            rationale=rationale,
             status="active",
-            generation_context={
-                "goals": ctx.goals,
-                "fitness_summary": ctx.fitness_summary,
-            },
+            generation_context=gen_context,
         )
         self.db.add(plan)
         await self.db.flush()

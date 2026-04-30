@@ -22,6 +22,7 @@ class TrainingPlan(Base):
     end_date: Mapped[date] = mapped_column(Date, nullable=False)
     phase: Mapped[Optional[str]] = mapped_column(String(50))
     plan_json: Mapped[Optional[dict]] = mapped_column(JSONB)
+    rationale: Mapped[Optional[str]] = mapped_column(Text)
     status: Mapped[str] = mapped_column(String(20), default="active")
     generation_context: Mapped[Optional[dict]] = mapped_column(JSONB)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

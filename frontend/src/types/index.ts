@@ -50,6 +50,7 @@ export interface TrainingPlan {
   end_date: string;
   phase: string | null;
   status: string;
+  rationale: string | null;
   workouts: PlannedWorkout[];
 }
 
