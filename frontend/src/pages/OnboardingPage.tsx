@@ -53,8 +53,8 @@ export default function OnboardingPage() {
     setStep("goals");
   };
 
-  const handleAddGoal = async (e: FormEvent) => {
-    e.preventDefault();
+  const saveCurrentGoal = async () => {
+    if (!goalTitle.trim()) return;
     const { data } = await client.post("/users/me/goals", {
       title: goalTitle,
       goal_type: goalType,
@@ -62,15 +62,24 @@ export default function OnboardingPage() {
       target_date: goalDate || null,
       description: goalDescription || null,
     });
-    setGoals([...goals, { id: data.id, title: data.title }]);
+    setGoals((prev) => [...prev, { id: data.id, title: data.title }]);
     setGoalTitle("");
     setGoalType("fitness");
     setGoalSport("");
     setGoalDate("");
     setGoalDescription("");
+    return data;
   };
 
-  const handleGoalsNext = () => {
+  const handleAddGoal = async (e: FormEvent) => {
+    e.preventDefault();
+    await saveCurrentGoal();
+  };
+
+  const handleGoalsNext = async () => {
+    if (goals.length === 0 && goalTitle.trim()) {
+      await saveCurrentGoal();
+    }
     setStep("plan");
   };
 
@@ -257,7 +266,7 @@ export default function OnboardingPage() {
             <div className="onboarding-actions">
               <button
                 onClick={handleGoalsNext}
-                disabled={goals.length === 0}
+                disabled={goals.length === 0 && !goalTitle.trim()}
                 className="btn-primary"
               >
                 Continue
