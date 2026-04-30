@@ -1,0 +1,177 @@
+digraph Chad {
+    rankdir=TB
+    bgcolor="white"
+    fontname="Helvetica"
+    fontsize=14
+    pad=0.4
+    nodesep=0.6
+    ranksep=0.8
+    splines=true
+    compound=true
+
+    node [
+        fontname="Helvetica"
+        fontsize=11
+        style="filled,rounded"
+        shape=box
+        fillcolor="#f8f9fa"
+        color="#dee2e6"
+        penwidth=1.5
+    ]
+
+    edge [
+        fontname="Helvetica"
+        fontsize=9
+        color="#6c757d"
+        penwidth=1.2
+        arrowsize=0.7
+    ]
+
+    // ==========================================
+    // USER CHANNELS
+    // ==========================================
+    subgraph cluster_channels {
+        label="User Channels"
+        style="dashed,rounded"
+        color="#adb5bd"
+        fontsize=13
+        fontcolor="#495057"
+        bgcolor="#f8f9fa"
+
+        web [label="🌐 Web App\n(React + Vite)" fillcolor="#61DAFB" fontcolor="#282c34" color="#61DAFB"]
+        sms [label="📱 SMS\n(Twilio)" fillcolor="#F22F46" fontcolor="white" color="#F22F46"]
+    }
+
+    // ==========================================
+    // EXTERNAL SERVICES
+    // ==========================================
+    subgraph cluster_external {
+        label="External Services"
+        style="dashed,rounded"
+        color="#adb5bd"
+        fontsize=13
+        fontcolor="#495057"
+        bgcolor="#fff8e1"
+
+        strava [label="🏃 Strava API\nOAuth2 + Webhooks" fillcolor="#FC4C02" fontcolor="white" color="#FC4C02"]
+        claude [label="🧠 Claude API\n(Sonnet 4.5)\nTool Use" fillcolor="#d4a574" fontcolor="white" color="#c4956a"]
+    }
+
+    // ==========================================
+    // RAILWAY PLATFORM
+    // ==========================================
+    subgraph cluster_railway {
+        label="Railway Platform"
+        style="filled,rounded"
+        color="#868e96"
+        fontsize=14
+        fontcolor="#343a40"
+        fillcolor="#e8f4f8"
+        penwidth=2
+
+        // API Layer
+        subgraph cluster_api {
+            label="FastAPI Backend"
+            style="filled,rounded"
+            color="#009688"
+            fontcolor="#009688"
+            fillcolor="#e0f2f1"
+            fontsize=12
+
+            api [label="API Gateway\n━━━━━━━━━━━━━━\n/api/auth/*\n/api/users/*\n/api/training/*\n/api/strava/*\n/api/conversations/*\n/api/webhooks/twilio" fillcolor="#009688" fontcolor="white" color="#00796b"]
+        }
+
+        // Agent Core
+        subgraph cluster_agent {
+            label="🤖 Agent Core"
+            style="filled,rounded"
+            color="#7c4dff"
+            fontcolor="#7c4dff"
+            fillcolor="#ede7f6"
+            fontsize=12
+
+            coach [label="ChadCoach\nOrchestrator" fillcolor="#7c4dff" fontcolor="white" color="#651fff"]
+            context_builder [label="Context Builder\n━━━━━━━━━━━━━━\nProfile + Goals\nCurrent Plan\nRecent Activities\nFitness Summary\nConversation History" fillcolor="#9575cd" fontcolor="white" color="#7e57c2"]
+            prompts [label="System Prompt\n━━━━━━━━━━━━━━\nCoaching Philosophy\nPeriodization Rules\nWorkout Templates\nAdaptation Logic" fillcolor="#9575cd" fontcolor="white" color="#7e57c2"]
+            tools [label="Agent Tools\n━━━━━━━━━━━━━━\nget_todays_workout\nget_week_schedule\nswap_workout\nreplace_workout\nadd_note" fillcolor="#9575cd" fontcolor="white" color="#7e57c2"]
+        }
+
+        // Services Layer
+        subgraph cluster_services {
+            label="Services"
+            style="filled,rounded"
+            color="#1565c0"
+            fontcolor="#1565c0"
+            fillcolor="#e3f2fd"
+            fontsize=12
+
+            auth_svc [label="Auth Service\nJWT + bcrypt" fillcolor="#42a5f5" fontcolor="white" color="#1e88e5"]
+            training_svc [label="Training Service\nPlans + Workouts" fillcolor="#42a5f5" fontcolor="white" color="#1e88e5"]
+            activity_svc [label="Activity Service\nSync + Match" fillcolor="#42a5f5" fontcolor="white" color="#1e88e5"]
+            notification_svc [label="Notification Service\nOutbound SMS" fillcolor="#42a5f5" fontcolor="white" color="#1e88e5"]
+            conversation_svc [label="Conversation Service\nSMS + Web" fillcolor="#42a5f5" fontcolor="white" color="#1e88e5"]
+        }
+
+        // Scheduled Jobs
+        subgraph cluster_jobs {
+            label="⏰ Scheduled Jobs (APScheduler)"
+            style="filled,rounded"
+            color="#e65100"
+            fontcolor="#e65100"
+            fillcolor="#fff3e0"
+            fontsize=12
+
+            daily_job [label="Daily Workout Text\n(per-user timezone)" fillcolor="#ff9800" fontcolor="white" color="#f57c00"]
+            weekly_job [label="Weekly Plan Review\n(Sunday evening)" fillcolor="#ff9800" fontcolor="white" color="#f57c00"]
+            sync_job [label="Strava Sync\n(every 6h backup)" fillcolor="#ff9800" fontcolor="white" color="#f57c00"]
+        }
+
+        // Database
+        db [label="🐘 PostgreSQL\n━━━━━━━━━━━━━━━━━\nusers │ strava_tokens\ngoals │ training_plans\nplanned_workouts\nactivities │ messages" fillcolor="#336791" fontcolor="white" color="#264d73" shape=cylinder]
+    }
+
+    // ==========================================
+    // CONNECTIONS
+    // ==========================================
+
+    // User channels -> API
+    web -> api [label="REST + JWT" color="#61DAFB"]
+    sms -> api [label="Twilio\nwebhook" color="#F22F46"]
+
+    // API -> Agent + Services
+    api -> coach [label="messages" color="#7c4dff" penwidth=2]
+    api -> auth_svc [style=dashed]
+    api -> training_svc [style=dashed]
+    api -> activity_svc [style=dashed]
+    api -> conversation_svc [style=dashed]
+
+    // Coach internals
+    coach -> context_builder
+    coach -> prompts
+    coach -> tools
+    coach -> claude [label="generate +\ntool use" color="#d4a574" penwidth=2]
+
+    // Coach -> Services
+    coach -> training_svc [label="update\nplans" style=dashed]
+    coach -> notification_svc [label="send\nresponse"]
+
+    // Services -> DB
+    auth_svc -> db
+    training_svc -> db
+    activity_svc -> db
+    conversation_svc -> db
+    context_builder -> db [label="read\ncontext"]
+    notification_svc -> db
+
+    // Strava
+    strava -> api [label="webhook\nevents" color="#FC4C02"]
+    activity_svc -> strava [label="fetch\nactivities" color="#FC4C02"]
+
+    // Notifications outbound
+    notification_svc -> sms [label="outbound\nSMS" color="#F22F46" style=bold]
+
+    // Scheduled jobs
+    daily_job -> coach [style=dashed color="#e65100"]
+    weekly_job -> coach [style=dashed color="#e65100"]
+    sync_job -> activity_svc [style=dashed color="#e65100"]
+}
