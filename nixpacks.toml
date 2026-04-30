@@ -1,3 +1,6 @@
+[phases.setup]
+nixPkgs = ["python39", "nodejs-18_x", "npm"]
+
 [phases.frontend]
 cmds = ["cd frontend && npm ci && npm run build"]
 
