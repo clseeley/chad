@@ -1478,4 +1478,23 @@ body {
   line-height: 1.7;
   white-space: pre-line;
   font-size: 0.9rem;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.rationale-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rationale-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rationale-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.rationale-body::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
 }
