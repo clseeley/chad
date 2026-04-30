@@ -89,7 +89,7 @@ export default function TrainingPlanPage() {
     .sort((a, b) => a - b);
 
   return (
-    <div className="page">
+    <div className="page page-wide">
       <h2>{plan.name}</h2>
 
       <div className="plan-layout">
