@@ -170,10 +170,13 @@ async def fitness_summary(
 
     result = await db.execute(
         select(Activity)
-        .where(and_(Activity.user_id == user.id, Activity.start_date >= str(start)))
+        .where(and_(Activity.user_id == user.id, Activity.start_date >= start))
         .order_by(Activity.start_date)
     )
     activities = result.scalars().all()
+
+    imperial = user.units == "imperial"
+    dist_divisor = 1609.34 if imperial else 1000.0
 
     weekly_running_dist = [0.0] * weeks
     weekly_running_time = [0.0] * weeks
@@ -186,7 +189,7 @@ async def fitness_summary(
 
         sport = SPORT_TYPE_MAP.get(a.sport_type, "cross_training")
         if sport == "running":
-            weekly_running_dist[week_idx] += (a.distance or 0) / 1000
+            weekly_running_dist[week_idx] += (a.distance or 0) / dist_divisor
             weekly_running_time[week_idx] += (a.moving_time or 0) / 60
         elif sport == "lifting":
             weekly_lifting[week_idx] += 1
@@ -197,6 +200,7 @@ async def fitness_summary(
         "lifting_sessions_per_week": weekly_lifting,
         "total_activities": len(activities),
         "weeks": weeks,
+        "units": "mi" if imperial else "km",
     }
 
 

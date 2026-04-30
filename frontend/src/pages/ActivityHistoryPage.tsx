@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import client from "../api/client";
+import { useAuth } from "../auth/AuthContext";
 
 interface Activity {
   id: string;
@@ -24,10 +25,12 @@ function formatDuration(seconds: number | null): string {
   return `${m}m ${s}s`;
 }
 
-function formatDistance(meters: number | null): string {
+function formatDistance(meters: number | null, units: string = "imperial"): string {
   if (!meters) return "--";
-  const mi = meters / 1609.34;
-  return `${mi.toFixed(1)} mi`;
+  if (units === "imperial") {
+    return `${(meters / 1609.34).toFixed(1)} mi`;
+  }
+  return `${(meters / 1000).toFixed(1)} km`;
 }
 
 
@@ -61,6 +64,7 @@ const SPORT_COLORS: Record<string, string> = {
 };
 
 export default function ActivityHistoryPage() {
+  const { user } = useAuth();
   const [activities, setActivities] = useState<Activity[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
@@ -134,7 +138,7 @@ export default function ActivityHistoryPage() {
                 </div>
               </div>
               <div className="activity-stats">
-                <span>{formatDistance(a.distance)}</span>
+                <span>{formatDistance(a.distance, user?.units)}</span>
                 <span>{formatDuration(a.moving_time)}</span>
                 {a.average_heartrate && (
                   <span>{Math.round(a.average_heartrate)} bpm</span>

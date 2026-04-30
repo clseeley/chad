@@ -25,6 +25,7 @@ interface Summary {
   weekly_running_distance: number[];
   lifting_sessions_per_week: number[];
   total_activities: number;
+  units?: string;
 }
 
 export default function DashboardPage() {
@@ -144,7 +145,7 @@ export default function DashboardPage() {
           <div className="dash-stats">
             <div className="dash-stat">
               <span className="dash-stat-value">{lastWeekDist.toFixed(1)}</span>
-              <span className="dash-stat-label">km run</span>
+              <span className="dash-stat-label">{summary?.units ?? "km"} run</span>
             </div>
             <div className="dash-stat">
               <span className="dash-stat-value">{lastWeekLifting}</span>
@@ -176,8 +177,12 @@ export default function DashboardPage() {
                   </div>
                 </div>
                 <div className="activity-stats">
-                  {a.distance != null && (
-                    <span>{(a.distance / 1000).toFixed(1)} km</span>
+                  {a.distance != null && a.distance > 0 && (
+                    <span>
+                      {user?.units === "imperial"
+                        ? `${(a.distance / 1609.34).toFixed(1)} mi`
+                        : `${(a.distance / 1000).toFixed(1)} km`}
+                    </span>
                   )}
                   {a.moving_time != null && (
                     <span>{Math.round(a.moving_time / 60)} min</span>

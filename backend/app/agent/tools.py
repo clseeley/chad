@@ -199,7 +199,7 @@ async def _get_recent_activities(user_id: uuid.UUID, db: AsyncSession, days: int
     cutoff = date.today() - timedelta(days=days)
     result = await db.execute(
         select(Activity).where(
-            and_(Activity.user_id == user_id, Activity.start_date >= str(cutoff))
+            and_(Activity.user_id == user_id, Activity.start_date >= cutoff)
         ).order_by(Activity.start_date.desc())
     )
     activities = result.scalars().all()
