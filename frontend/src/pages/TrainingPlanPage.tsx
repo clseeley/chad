@@ -90,89 +90,92 @@ export default function TrainingPlanPage() {
 
   return (
     <div className="page">
-      <div className="page-header">
-        <div>
-          <h2>{plan.name}</h2>
-          {plan.description && (
-            <p className="muted">{plan.description}</p>
-          )}
-        </div>
-        <button
-          onClick={handleGenerate}
-          disabled={generating}
-          className="btn-outline btn-sm"
-        >
-          {generating ? "Regenerating..." : "Regenerate"}
-        </button>
-      </div>
+      <h2>{plan.name}</h2>
 
-      <div className="plan-meta">
-        <span>
-          {plan.start_date} — {plan.end_date}
-        </span>
-        {plan.phase && <span className="phase-badge">{plan.phase}</span>}
-      </div>
+      <div className="plan-layout">
+        <div className="plan-weeks">
+          {weekNumbers.map((wk) => (
+            <div key={wk} className="plan-week">
+              <h3>Week {wk}</h3>
+              <div className="week-grid">
+                {DAYS.map((day, dayIdx) => {
+                  const dayWorkouts = (weeks[wk] || []).filter(
+                    (w) => w.day_of_week === dayIdx
+                  );
 
-      {plan.rationale && (
-        <div className="rationale-card">
-          <button
-            className="rationale-toggle"
-            onClick={() => setRationaleOpen(!rationaleOpen)}
-          >
-            <span>Coach's Notes</span>
-            <span className={`rationale-chevron ${rationaleOpen ? "open" : ""}`}>&#9662;</span>
-          </button>
-          {rationaleOpen && (
-            <div className="rationale-body">{plan.rationale}</div>
-          )}
-        </div>
-      )}
-
-      <div className="plan-weeks">
-        {weekNumbers.map((wk) => (
-          <div key={wk} className="plan-week">
-            <h3>Week {wk}</h3>
-            <div className="week-grid">
-              {DAYS.map((day, dayIdx) => {
-                const dayWorkouts = (weeks[wk] || []).filter(
-                  (w) => w.day_of_week === dayIdx
-                );
-
-                return (
-                  <div key={dayIdx} className="week-day">
-                    <div className="day-label">{day}</div>
-                    {dayWorkouts.length === 0 ? (
-                      <div className="day-rest">Rest</div>
-                    ) : (
-                      dayWorkouts.map((w) => (
-                        <div
-                          key={w.id}
-                          className={`workout-card ${w.completed ? "completed" : ""}`}
-                          style={{
-                            borderLeftColor: SPORT_COLORS[w.sport] || "var(--border)",
-                          }}
-                          onClick={() =>
-                            setExpanded(expanded === w.id ? null : w.id)
-                          }
-                        >
-                          <div className="workout-title">
-                            {w.completed && <span className="check">&#10003;</span>}
-                            {w.title}
-                          </div>
-                          {expanded === w.id && (
-                            <div className="workout-detail">
-                              {w.description}
+                  return (
+                    <div key={dayIdx} className="week-day">
+                      <div className="day-label">{day}</div>
+                      {dayWorkouts.length === 0 ? (
+                        <div className="day-rest">Rest</div>
+                      ) : (
+                        dayWorkouts.map((w) => (
+                          <div
+                            key={w.id}
+                            className={`workout-card ${w.completed ? "completed" : ""}`}
+                            style={{
+                              borderLeftColor: SPORT_COLORS[w.sport] || "var(--border)",
+                            }}
+                            onClick={() =>
+                              setExpanded(expanded === w.id ? null : w.id)
+                            }
+                          >
+                            <div className="workout-title">
+                              {w.completed && <span className="check">&#10003;</span>}
+                              {w.title}
                             </div>
-                          )}
-                        </div>
-                      ))
-                    )}
-                  </div>
-                );
-              })}
+                            {expanded === w.id && (
+                              <div className="workout-detail">
+                                {w.description}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             </div>
+          ))}
+        </div>
+
+        <div className="plan-sidebar">
+          {plan.description && (
+            <p className="muted" style={{ marginBottom: "1rem" }}>{plan.description}</p>
+          )}
+
+          <div className="plan-meta">
+            <span>
+              {plan.start_date} — {plan.end_date}
+            </span>
+            {plan.phase && <span className="phase-badge">{plan.phase}</span>}
           </div>
-        ))}
+
+          {plan.rationale && (
+            <div className="rationale-card">
+              <button
+                className="rationale-toggle"
+                onClick={() => setRationaleOpen(!rationaleOpen)}
+              >
+                <span>Coach's Notes</span>
+                <span className={`rationale-chevron ${rationaleOpen ? "open" : ""}`}>&#9662;</span>
+              </button>
+              {rationaleOpen && (
+                <div className="rationale-body">{plan.rationale}</div>
+              )}
+            </div>
+          )}
+
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            className="btn-outline btn-sm"
+            style={{ width: "100%" }}
+          >
+            {generating ? "Regenerating..." : "Regenerate Plan"}
+          </button>
+        </div>
       </div>
     </div>
   );
