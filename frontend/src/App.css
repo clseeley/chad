@@ -692,6 +692,13 @@ body {
 .detail-table tbody tr:hover {
   background: rgba(252, 76, 2, 0.04);
 }
+.detail-map {
+  width: 100%;
+  height: 220px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
 .detail-strava-link {
   display: inline-block;
   color: var(--primary);

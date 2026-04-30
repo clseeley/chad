@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import uuid
 from datetime import date, timedelta
 from typing import Optional
 
@@ -178,6 +179,14 @@ async def get_activity(
     if not a:
         raise HTTPException(status_code=404, detail="Activity not found")
 
+    if a.splits_json is None or a.laps_json is None:
+        await _enrich_activity_from_strava(a, user.id, db)
+
+    polyline = None
+    if a.raw_json:
+        m = a.raw_json.get("map") or {}
+        polyline = m.get("summary_polyline") or m.get("polyline")
+
     return {
         "id": str(a.id),
         "strava_id": a.strava_id,
@@ -197,8 +206,34 @@ async def get_activity(
         "calories": a.calories,
         "splits": a.splits_json,
         "laps": a.laps_json,
+        "polyline": polyline,
         "matched_workout_id": str(a.matched_workout_id) if a.matched_workout_id else None,
     }
+
+
+async def _enrich_activity_from_strava(
+    activity: Activity, user_id: uuid.UUID, db: AsyncSession
+) -> None:
+    """Fetch full activity detail from Strava to backfill splits/laps/map."""
+    try:
+        from app.models.strava_token import StravaToken
+        result = await db.execute(
+            select(StravaToken).where(StravaToken.user_id == user_id)
+        )
+        token = result.scalar_one_or_none()
+        if not token:
+            return
+
+        from app.integrations import strava_client
+        access = await strava_client.get_valid_access_token(token)
+        detail = await strava_client.get_activity_detail(access, activity.strava_id)
+
+        activity.splits_json = detail.get("splits_metric")
+        activity.laps_json = detail.get("laps")
+        activity.raw_json = detail
+        await db.commit()
+    except Exception:
+        log.warning("strava_enrich_failed", activity_id=str(activity.id))
 
 
 @router.get("/summary")

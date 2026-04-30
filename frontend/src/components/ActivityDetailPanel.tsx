@@ -1,4 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import L from "leaflet";
+import "leaflet/dist/leaflet.css";
 import client from "../api/client";
 
 interface ActivityDetail {
@@ -20,6 +22,7 @@ interface ActivityDetail {
   calories: number | null;
   splits: SplitData[] | null;
   laps: LapData[] | null;
+  polyline: string | null;
 }
 
 interface SplitData {
@@ -41,6 +44,98 @@ interface LapData {
   average_heartrate?: number;
   max_heartrate?: number;
   lap_index: number;
+}
+
+function decodePolyline(encoded: string): [number, number][] {
+  const points: [number, number][] = [];
+  let index = 0;
+  let lat = 0;
+  let lng = 0;
+
+  while (index < encoded.length) {
+    let shift = 0;
+    let result = 0;
+    let byte: number;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lat += result & 1 ? ~(result >> 1) : result >> 1;
+
+    shift = 0;
+    result = 0;
+    do {
+      byte = encoded.charCodeAt(index++) - 63;
+      result |= (byte & 0x1f) << shift;
+      shift += 5;
+    } while (byte >= 0x20);
+    lng += result & 1 ? ~(result >> 1) : result >> 1;
+
+    points.push([lat / 1e5, lng / 1e5]);
+  }
+  return points;
+}
+
+function RouteMap({ polyline }: { polyline: string }) {
+  const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<L.Map | null>(null);
+
+  useEffect(() => {
+    if (!mapRef.current || !polyline) return;
+
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current.remove();
+      mapInstanceRef.current = null;
+    }
+
+    const points = decodePolyline(polyline);
+    if (points.length === 0) return;
+
+    const map = L.map(mapRef.current, {
+      zoomControl: false,
+      attributionControl: false,
+      dragging: true,
+      scrollWheelZoom: false,
+    });
+    mapInstanceRef.current = map;
+
+    L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png").addTo(map);
+
+    const latLngs = points.map(([lat, lng]) => L.latLng(lat, lng));
+    L.polyline(latLngs, {
+      color: "#FC4C02",
+      weight: 3,
+      opacity: 0.9,
+    }).addTo(map);
+
+    const bounds = L.latLngBounds(latLngs);
+    map.fitBounds(bounds, { padding: [20, 20] });
+
+    const start = latLngs[0];
+    const end = latLngs[latLngs.length - 1];
+    L.circleMarker(start, {
+      radius: 5,
+      fillColor: "#22c55e",
+      color: "#fff",
+      weight: 2,
+      fillOpacity: 1,
+    }).addTo(map);
+    L.circleMarker(end, {
+      radius: 5,
+      fillColor: "#ef4444",
+      color: "#fff",
+      weight: 2,
+      fillOpacity: 1,
+    }).addTo(map);
+
+    return () => {
+      map.remove();
+      mapInstanceRef.current = null;
+    };
+  }, [polyline]);
+
+  return <div ref={mapRef} className="detail-map" />;
 }
 
 function formatDuration(seconds: number | null): string {
@@ -135,6 +230,8 @@ export default function ActivityDetailPanel({
 
         {!loading && detail && (
           <div className="detail-panel-body">
+            {detail.polyline && <RouteMap polyline={detail.polyline} />}
+
             <div className="detail-meta">
               <span className="detail-sport">
                 {SPORT_LABELS[detail.sport_type] || detail.sport_type}
