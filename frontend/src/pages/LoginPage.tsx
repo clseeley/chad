@@ -22,60 +22,48 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
-      <div className="auth-hero">
-        <div className="hero-brand"><span>Chad</span></div>
-        <p className="hero-tagline">
-          AI-powered coaching that adapts to your runs, lifts, and life.
+      <div className="auth-card">
+        <div className="auth-brand"><span>Chad</span></div>
+        <p className="tagline">AI-powered fitness coaching</p>
+
+        <h1>Welcome back</h1>
+        <p className="subtitle">Log in to continue training</p>
+        <form onSubmit={handleSubmit}>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          {error && <p className="error">{error}</p>}
+          <button type="submit">Log In</button>
+        </form>
+        <p className="switch">
+          Don't have an account? <Link to="/register">Sign up</Link>
         </p>
-        <div className="hero-features">
-          <div className="hero-feature">
-            <div className="hero-feature-icon">&#x1F3C3;</div>
-            <div className="hero-feature-text">
-              <strong>Strava-connected</strong>
-              <span>Auto-syncs your runs, rides, and workouts</span>
-            </div>
+
+        <div className="auth-divider" />
+        <div className="auth-features">
+          <div className="auth-feature">
+            <div className="auth-feature-icon">&#x1F3C3;</div>
+            <div className="auth-feature-label">Strava sync</div>
           </div>
-          <div className="hero-feature">
-            <div className="hero-feature-icon">&#x1F9E0;</div>
-            <div className="hero-feature-text">
-              <strong>AI that coaches</strong>
-              <span>Personalized plans that adjust week to week</span>
-            </div>
+          <div className="auth-feature">
+            <div className="auth-feature-icon">&#x1F9E0;</div>
+            <div className="auth-feature-label">AI plans</div>
           </div>
-          <div className="hero-feature">
-            <div className="hero-feature-icon">&#x1F4F1;</div>
-            <div className="hero-feature-text">
-              <strong>Text your coach</strong>
-              <span>Get advice via SMS or web chat, anytime</span>
-            </div>
+          <div className="auth-feature">
+            <div className="auth-feature-icon">&#x1F4F1;</div>
+            <div className="auth-feature-label">SMS coaching</div>
           </div>
-        </div>
-      </div>
-      <div className="auth-form-side">
-        <div className="auth-card">
-          <h1>Welcome back</h1>
-          <p className="subtitle">Log in to continue training</p>
-          <form onSubmit={handleSubmit}>
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-            />
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-            {error && <p className="error">{error}</p>}
-            <button type="submit">Log In</button>
-          </form>
-          <p className="switch">
-            Don't have an account? <Link to="/register">Sign up</Link>
-          </p>
         </div>
       </div>
     </div>
