@@ -58,12 +58,16 @@ class ChadCoach:
 
         response = await self.client.messages.create(
             model=settings.CLAUDE_MODEL,
-            max_tokens=8000,
+            max_tokens=16000,
             system=SYSTEM_PROMPT,
             messages=messages,
         )
 
         raw_text = response.content[0].text
+
+        if response.stop_reason == "max_tokens":
+            log.warning("plan_truncated", user_id=str(user_id), length=len(raw_text))
+
         plan_data = self._parse_plan_json(raw_text)
 
         plan = await self._save_plan(user_id, plan_data, ctx)
@@ -218,11 +222,28 @@ class ChadCoach:
         text = raw.strip()
         if text.startswith("```"):
             lines = text.split("\n")
-            lines = lines[1:]  # remove ```json
+            lines = lines[1:]
             if lines and lines[-1].strip() == "```":
                 lines = lines[:-1]
             text = "\n".join(lines)
-        return json.loads(text)
+
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError:
+            # Attempt to repair truncated JSON by closing open structures
+            repaired = text
+            open_braces = repaired.count("{") - repaired.count("}")
+            open_brackets = repaired.count("[") - repaired.count("]")
+            # Trim back to last complete item (remove trailing partial string/value)
+            last_complete = max(repaired.rfind("},"), repaired.rfind("}]"))
+            if last_complete > 0:
+                repaired = repaired[:last_complete + 1]
+            repaired += "]" * open_brackets + "}" * open_braces
+            # Recount after trim
+            open_braces = repaired.count("{") - repaired.count("}")
+            open_brackets = repaired.count("[") - repaired.count("]")
+            repaired += "]" * open_brackets + "}" * open_braces
+            return json.loads(repaired)
 
     async def _save_plan(
         self, user_id: uuid.UUID, plan_data: dict, ctx: AthleteContext
