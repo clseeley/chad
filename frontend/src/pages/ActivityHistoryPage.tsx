@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import ActivityDetailPanel from "../components/ActivityDetailPanel";
 
 interface Activity {
   id: string;
@@ -32,8 +33,6 @@ function formatDistance(meters: number | null, units: string = "imperial"): stri
   }
   return `${(meters / 1000).toFixed(1)} km`;
 }
-
-
 
 const SPORT_LABELS: Record<string, string> = {
   Run: "Run",
@@ -68,6 +67,7 @@ export default function ActivityHistoryPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
+  const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
 
   useEffect(() => {
     const params: Record<string, string> = {};
@@ -120,7 +120,11 @@ export default function ActivityHistoryPage() {
       ) : (
         <div className="activity-list">
           {activities.map((a) => (
-            <div key={a.id} className="activity-row">
+            <div
+              key={a.id}
+              className={`activity-row clickable ${selectedActivityId === a.id ? "selected" : ""}`}
+              onClick={() => setSelectedActivityId(selectedActivityId === a.id ? null : a.id)}
+            >
               <div
                 className="sport-dot"
                 style={{ background: SPORT_COLORS[a.sport_type] || "var(--text-muted)" }}
@@ -151,6 +155,12 @@ export default function ActivityHistoryPage() {
           ))}
         </div>
       )}
+
+      <ActivityDetailPanel
+        activityId={selectedActivityId}
+        units={user?.units || "imperial"}
+        onClose={() => setSelectedActivityId(null)}
+      />
     </div>
   );
 }

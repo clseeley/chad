@@ -159,6 +159,48 @@ async def list_activities(
     ]
 
 
+@router.get("/activities/{activity_id}")
+async def get_activity(
+    activity_id: str,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    import uuid as _uuid
+    try:
+        aid = _uuid.UUID(activity_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid activity ID")
+
+    result = await db.execute(
+        select(Activity).where(and_(Activity.id == aid, Activity.user_id == user.id))
+    )
+    a = result.scalar_one_or_none()
+    if not a:
+        raise HTTPException(status_code=404, detail="Activity not found")
+
+    return {
+        "id": str(a.id),
+        "strava_id": a.strava_id,
+        "sport_type": a.sport_type,
+        "name": a.name,
+        "description": a.description,
+        "start_date": a.start_date.isoformat(),
+        "moving_time": a.moving_time,
+        "elapsed_time": a.elapsed_time,
+        "distance": a.distance,
+        "total_elevation_gain": a.total_elevation_gain,
+        "average_speed": a.average_speed,
+        "max_speed": a.max_speed,
+        "average_heartrate": a.average_heartrate,
+        "max_heartrate": a.max_heartrate,
+        "suffer_score": a.suffer_score,
+        "calories": a.calories,
+        "splits": a.splits_json,
+        "laps": a.laps_json,
+        "matched_workout_id": str(a.matched_workout_id) if a.matched_workout_id else None,
+    }
+
+
 @router.get("/summary")
 async def fitness_summary(
     weeks: int = Query(4, le=12),

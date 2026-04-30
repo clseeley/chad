@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
+import ActivityDetailPanel from "../components/ActivityDetailPanel";
 import type { PlannedWorkout } from "../types";
 
 const SPORT_COLORS: Record<string, string> = {
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
 
   useEffect(() => {
     Promise.all([
@@ -169,7 +171,11 @@ export default function DashboardPage() {
         ) : (
           <div className="activity-list">
             {activities.map((a) => (
-              <div key={a.id} className="activity-row">
+              <div
+                key={a.id}
+                className={`activity-row clickable ${selectedActivityId === a.id ? "selected" : ""}`}
+                onClick={() => setSelectedActivityId(selectedActivityId === a.id ? null : a.id)}
+              >
                 <div className="activity-info">
                   <div className="activity-name">{a.name}</div>
                   <div className="activity-date">
@@ -193,6 +199,12 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      <ActivityDetailPanel
+        activityId={selectedActivityId}
+        units={user?.units || "imperial"}
+        onClose={() => setSelectedActivityId(null)}
+      />
     </div>
   );
 }
