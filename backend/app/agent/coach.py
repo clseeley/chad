@@ -295,13 +295,16 @@ class ChadCoach:
         self.db.add(plan)
         await self.db.flush()
 
+        plan_start = date.fromisoformat(plan_data["start_date"])
+        week1_monday = plan_start - timedelta(days=plan_start.weekday())
+
         for week in plan_data.get("weeks", []):
             week_num = week["week_number"]
-            start = date.fromisoformat(plan_data["start_date"]) + timedelta(weeks=week_num - 1)
+            week_monday = week1_monday + timedelta(weeks=week_num - 1)
 
             for workout in week.get("workouts", []):
                 day = workout["day_of_week"]
-                scheduled = start + timedelta(days=day)
+                scheduled = week_monday + timedelta(days=day)
 
                 pw = PlannedWorkout(
                     training_plan_id=plan.id,
