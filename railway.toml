@@ -5,7 +5,7 @@ builder = "nixpacks"
 aptPkgs = ["libpq-dev", "libstdc++6"]
 
 [deploy]
-startCommand = "export LD_LIBRARY_PATH=$(find /nix/store -name 'libstdc++.so.6' -printf '%h\n' 2>/dev/null | head -1):$LD_LIBRARY_PATH && cd backend && /app/venv/bin/alembic upgrade head && /app/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
+startCommand = "cd backend && LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH /app/venv/bin/alembic upgrade head && LD_LIBRARY_PATH=/usr/lib/x86_64-linux-gnu:$LD_LIBRARY_PATH /app/venv/bin/uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"
 healthcheckPath = "/api/health"
 healthcheckTimeout = 30
 restartPolicyType = "on_failure"
