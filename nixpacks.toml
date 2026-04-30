@@ -1,5 +1,5 @@
 [phases.setup]
-nixPkgs = ["python39", "python39Packages.pip", "python39Packages.virtualenv", "nodejs-18_x"]
+nixPkgs = ["python39", "python39Packages.pip", "python39Packages.virtualenv", "nodejs-18_x", "stdenv.cc.cc.lib"]
 
 [phases.frontend]
 cmds = ["cd frontend && npm ci && npm run build"]
