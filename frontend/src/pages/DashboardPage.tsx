@@ -65,15 +65,19 @@ export default function DashboardPage() {
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const [expandedWorkout, setExpandedWorkout] = useState<string | null>(null);
 
+  const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(null);
+
   useEffect(() => {
     Promise.all([
       client.get("/training/plan/week?offset=0").catch(() => ({ data: [] })),
       client.get("/training/activities?limit=5").catch(() => ({ data: [] })),
       client.get("/training/summary?weeks=4").catch(() => ({ data: null })),
-    ]).then(([weekRes, actRes, sumRes]) => {
+      client.get("/training/plan/debug").catch(() => ({ data: null })),
+    ]).then(([weekRes, actRes, sumRes, debugRes]) => {
       setWeekWorkouts(weekRes.data || []);
       setActivities(actRes.data || []);
       setSummary(sumRes.data);
+      setDebugInfo(debugRes.data);
       setLoading(false);
     });
   }, []);
@@ -261,6 +265,15 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
+
+      {debugInfo && (
+        <details style={{ marginTop: "2rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>
+          <summary style={{ cursor: "pointer", marginBottom: "0.5rem" }}>Debug: Plan Date Info</summary>
+          <pre style={{ background: "var(--surface)", padding: "1rem", borderRadius: "8px", overflow: "auto", maxHeight: "300px" }}>
+            {JSON.stringify(debugInfo, null, 2)}
+          </pre>
+        </details>
+      )}
 
       <ActivityDetailPanel
         activityId={selectedActivityId}
