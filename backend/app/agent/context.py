@@ -151,7 +151,7 @@ class ContextBuilder:
         cutoff = date.today() - timedelta(days=days)
         result = await self.db.execute(
             select(Activity).where(
-                and_(Activity.user_id == user_id, Activity.start_date >= str(cutoff))
+                and_(Activity.user_id == user_id, Activity.start_date >= cutoff)
             ).order_by(Activity.start_date.desc()).limit(20)
         )
         activities = []
