@@ -1474,7 +1474,7 @@ body {
 
 .rationale-body {
   padding: 0 1.25rem 1.25rem;
-  color: var(--text-muted);
+  color: var(--text);
   line-height: 1.7;
   white-space: pre-line;
   font-size: 0.9rem;
