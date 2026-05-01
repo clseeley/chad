@@ -35,11 +35,11 @@ function getTodayStr(): string {
   return `${y}-${m}-${d}`;
 }
 
-function getWeekDates(): { dayName: string; dateStr: string; dateLabel: string }[] {
+function getWeekDates(offset = 0): { dayName: string; dateStr: string; dateLabel: string }[] {
   const now = new Date();
   const dayOfWeek = (now.getDay() + 6) % 7;
   const monday = new Date(now);
-  monday.setDate(now.getDate() - dayOfWeek);
+  monday.setDate(now.getDate() - dayOfWeek + offset * 7);
 
   const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   return days.map((name, i) => {
@@ -65,25 +65,33 @@ export default function DashboardPage() {
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
   const [expandedWorkout, setExpandedWorkout] = useState<string | null>(null);
 
-  const [debugInfo, setDebugInfo] = useState<Record<string, unknown> | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
 
   useEffect(() => {
     Promise.all([
       client.get("/training/plan/week?offset=0").catch(() => ({ data: [] })),
       client.get("/training/activities?limit=5").catch(() => ({ data: [] })),
       client.get("/training/summary?weeks=4").catch(() => ({ data: null })),
-      client.get("/training/plan/debug").catch(() => ({ data: null })),
-    ]).then(([weekRes, actRes, sumRes, debugRes]) => {
-      setWeekWorkouts(weekRes.data || []);
+    ]).then(async ([weekRes, actRes, sumRes]) => {
+      let workouts = weekRes.data || [];
+      let offset = 0;
+      if (workouts.length === 0) {
+        const next = await client.get("/training/plan/week?offset=1").catch(() => ({ data: [] }));
+        if (next.data && next.data.length > 0) {
+          workouts = next.data;
+          offset = 1;
+        }
+      }
+      setWeekWorkouts(workouts);
+      setWeekOffset(offset);
       setActivities(actRes.data || []);
       setSummary(sumRes.data);
-      setDebugInfo(debugRes.data);
       setLoading(false);
     });
   }, []);
 
   const todayStr = getTodayStr();
-  const weekDates = getWeekDates();
+  const weekDates = getWeekDates(weekOffset);
   const todayWorkouts = weekWorkouts.filter((w) => w.scheduled_date === todayStr);
 
   const handleToggleComplete = async (workoutId: string) => {
@@ -124,8 +132,10 @@ export default function DashboardPage() {
       <div className="dashboard-grid">
         <div className="card">
           <h3>Today's Workout</h3>
-          {todayWorkouts.length === 0 ? (
+          {todayWorkouts.length === 0 && weekOffset === 0 ? (
             <p className="muted">Rest day — no workouts scheduled.</p>
+          ) : todayWorkouts.length === 0 && weekOffset > 0 ? (
+            <p className="muted">Your plan starts next week — check the schedule below.</p>
           ) : (
             todayWorkouts.map((w) => (
               <div key={w.id} className="dash-workout">
@@ -176,7 +186,7 @@ export default function DashboardPage() {
 
       <div className="dash-this-week">
         <div className="dash-recent-header">
-          <h3>This Week</h3>
+          <h3>{weekOffset === 0 ? "This Week" : "Next Week"}</h3>
           <Link to="/plan" className="dash-link">View full plan</Link>
         </div>
         <div className="week-schedule">
@@ -265,15 +275,6 @@ export default function DashboardPage() {
           </div>
         )}
       </div>
-
-      {debugInfo && (
-        <details style={{ marginTop: "2rem", fontSize: "0.75rem", color: "var(--text-muted)" }}>
-          <summary style={{ cursor: "pointer", marginBottom: "0.5rem" }}>Debug: Plan Date Info</summary>
-          <pre style={{ background: "var(--surface)", padding: "1rem", borderRadius: "8px", overflow: "auto", maxHeight: "300px" }}>
-            {JSON.stringify(debugInfo, null, 2)}
-          </pre>
-        </details>
-      )}
 
       <ActivityDetailPanel
         activityId={selectedActivityId}

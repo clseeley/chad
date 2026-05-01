@@ -96,13 +96,6 @@ async def get_plan_week(
     if not plan:
         return []
 
-    all_dates = sorted(set(str(w.scheduled_date) for w in plan.workouts))
-    log.info("plan_week_debug",
-             week_start=str(week_start), week_end=str(week_end),
-             total_workouts=len(plan.workouts),
-             sample_dates=all_dates[:10],
-             plan_start=str(plan.start_date))
-
     return [
         WorkoutResponse(
             id=str(w.id),
@@ -270,45 +263,6 @@ async def _enrich_activity_from_strava(
         await db.commit()
     except Exception:
         log.warning("strava_enrich_failed", activity_id=str(activity.id))
-
-
-@router.get("/plan/debug")
-async def plan_debug(
-    user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    today = date.today()
-    week_start = today - timedelta(days=today.weekday())
-    week_end = week_start + timedelta(days=6)
-
-    result = await db.execute(
-        select(TrainingPlan)
-        .options(selectinload(TrainingPlan.workouts))
-        .where(and_(TrainingPlan.user_id == user.id, TrainingPlan.status == "active"))
-        .order_by(TrainingPlan.created_at.desc())
-        .limit(1)
-    )
-    plan = result.scalar_one_or_none()
-    if not plan:
-        return {"plan": None}
-
-    all_dates = sorted(set(str(w.scheduled_date) for w in plan.workouts))
-    in_range = [
-        {"date": str(w.scheduled_date), "day_of_week": w.day_of_week, "title": w.title}
-        for w in plan.workouts
-        if week_start <= w.scheduled_date <= week_end
-    ]
-
-    return {
-        "today": str(today),
-        "week_start": str(week_start),
-        "week_end": str(week_end),
-        "plan_start": str(plan.start_date),
-        "plan_end": str(plan.end_date),
-        "total_workouts": len(plan.workouts),
-        "all_scheduled_dates": all_dates,
-        "in_current_week": in_range,
-    }
 
 
 @router.get("/summary")

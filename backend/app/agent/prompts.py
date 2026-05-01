@@ -113,6 +113,7 @@ workout_type for cross_training: "mobility", "yoga", "swim", "bike"
 workout_type for rest: "rest"
 
 Constraints:
+- start_date MUST be the Monday of the current week (the Monday on or before today's date)
 - Never schedule hard running (tempo, intervals) on the same day as heavy lower body lifting
 - Include 1 rest day minimum per week
 - Deload every 3rd or 4th week (reduce volume by 30-40%, maintain intensity)
