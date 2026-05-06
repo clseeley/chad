@@ -5,9 +5,11 @@ from datetime import date, timedelta
 from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy import select, and_
+from pydantic import BaseModel
+from sqlalchemy import delete, select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
+from sqlalchemy.orm.attributes import flag_modified
 
 import structlog
 
@@ -139,6 +141,64 @@ async def toggle_workout_complete(
     await db.commit()
 
     return {"id": str(workout.id), "completed": workout.completed}
+
+
+@router.patch("/workouts/{workout_id}/exercises/{exercise_index}/toggle")
+async def toggle_exercise_complete(
+    workout_id: str,
+    exercise_index: int,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        wid = uuid.UUID(workout_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid workout ID")
+
+    result = await db.execute(
+        select(PlannedWorkout).where(
+            and_(PlannedWorkout.id == wid, PlannedWorkout.user_id == user.id)
+        )
+    )
+    workout = result.scalar_one_or_none()
+    if not workout:
+        raise HTTPException(status_code=404, detail="Workout not found")
+
+    metrics = workout.target_metrics or {}
+    exercises = metrics.get("exercises", [])
+    if exercise_index < 0 or exercise_index >= len(exercises):
+        raise HTTPException(status_code=400, detail="Invalid exercise index")
+
+    exercises[exercise_index]["completed"] = not exercises[exercise_index].get("completed", False)
+    metrics["exercises"] = exercises
+    workout.target_metrics = metrics
+    flag_modified(workout, "target_metrics")
+
+    all_done = all(ex.get("completed", False) for ex in exercises)
+    workout.completed = all_done
+
+    await db.commit()
+
+    return {
+        "id": str(workout.id),
+        "completed": workout.completed,
+        "target_metrics": workout.target_metrics,
+    }
+
+
+@router.delete("/plans")
+async def delete_all_plans(
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    result = await db.execute(
+        select(TrainingPlan).where(TrainingPlan.user_id == user.id)
+    )
+    plans = result.scalars().all()
+    for plan in plans:
+        await db.delete(plan)
+    await db.commit()
+    return {"deleted": len(plans)}
 
 
 @router.get("/activities")
@@ -310,8 +370,13 @@ async def fitness_summary(
     }
 
 
+class GeneratePlanRequest(BaseModel):
+    notes: Optional[str] = None
+
+
 @router.post("/generate")
 async def generate_plan(
+    body: Optional[GeneratePlanRequest] = None,
     user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
@@ -325,8 +390,9 @@ async def generate_plan(
         )
 
     coach = ChadCoach(db)
+    notes = body.notes if body else None
     try:
-        plan = await coach.generate_plan(user.id)
+        plan = await coach.generate_plan(user_id=user.id, notes=notes)
     except Exception as e:
         import traceback
         log.error("plan_generation_failed", user_id=str(user.id), error=str(e), traceback=traceback.format_exc())

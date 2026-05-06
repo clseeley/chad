@@ -3,7 +3,6 @@ import { AuthProvider } from "./auth/AuthContext";
 import ProtectedRoute from "./auth/ProtectedRoute";
 import Layout from "./components/Layout";
 import ActivityHistoryPage from "./pages/ActivityHistoryPage";
-import ChatPage from "./pages/ChatPage";
 import DashboardPage from "./pages/DashboardPage";
 import GoalsPage from "./pages/GoalsPage";
 import LoginPage from "./pages/LoginPage";
@@ -38,7 +37,6 @@ export default function App() {
             <Route path="/" element={<DashboardPage />} />
             <Route path="/plan" element={<TrainingPlanPage />} />
             <Route path="/activities" element={<ActivityHistoryPage />} />
-            <Route path="/chat" element={<ChatPage />} />
             <Route path="/goals" element={<GoalsPage />} />
             <Route path="/settings" element={<SettingsPage />} />
           </Route>

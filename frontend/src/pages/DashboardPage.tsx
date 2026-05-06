@@ -1,8 +1,10 @@
+import type React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import ActivityDetailPanel from "../components/ActivityDetailPanel";
+import WorkoutDetailPanel from "../components/WorkoutDetailPanel";
 import type { PlannedWorkout } from "../types";
 
 const SPORT_COLORS: Record<string, string> = {
@@ -63,7 +65,7 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
-  const [expandedWorkout, setExpandedWorkout] = useState<string | null>(null);
+  const [selectedWorkout, setSelectedWorkout] = useState<PlannedWorkout | null>(null);
 
   const [weekOffset, setWeekOffset] = useState(0);
 
@@ -108,6 +110,14 @@ export default function DashboardPage() {
   const lastWeekDist = summary?.weekly_running_distance?.slice(-1)[0] ?? 0;
   const lastWeekLifting = summary?.lifting_sessions_per_week?.slice(-1)[0] ?? 0;
 
+  const weekPlannedMiles = weekWorkouts
+    .filter((w) => w.sport === "running")
+    .reduce((sum, w) => {
+      const m = w.target_metrics as Record<string, number> | null;
+      return sum + (m?.distance_mi ?? 0);
+    }, 0);
+  const weekLiftCount = weekWorkouts.filter((w) => w.sport === "lifting").length;
+
   if (loading) {
     return (
       <div className="page">
@@ -138,10 +148,15 @@ export default function DashboardPage() {
             <p className="muted">Your plan starts next week — check the schedule below.</p>
           ) : (
             todayWorkouts.map((w) => (
-              <div key={w.id} className="dash-workout">
+              <div
+                key={w.id}
+                className="dash-workout"
+                onClick={() => setSelectedWorkout(w)}
+                style={{ cursor: "pointer" }}
+              >
                 <button
                   className={`workout-check ${w.completed ? "checked" : ""}`}
-                  onClick={() => handleToggleComplete(w.id)}
+                  onClick={(e) => { e.stopPropagation(); handleToggleComplete(w.id); }}
                   title={w.completed ? "Mark incomplete" : "Mark complete"}
                 >
                   {w.completed ? "✓" : ""}
@@ -166,17 +181,17 @@ export default function DashboardPage() {
         </div>
 
         <div className="card">
-          <h3>Quick Stats (last week)</h3>
+          <h3>Quick Stats <span className="muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>(last week)</span></h3>
           <div className="dash-stats">
-            <div className="dash-stat">
+            <div className="dash-stat" style={{ '--stat-accent': 'var(--running)' } as React.CSSProperties}>
               <span className="dash-stat-value">{lastWeekDist.toFixed(1)}</span>
               <span className="dash-stat-label">{summary?.units ?? "km"} run</span>
             </div>
-            <div className="dash-stat">
+            <div className="dash-stat" style={{ '--stat-accent': 'var(--lifting)' } as React.CSSProperties}>
               <span className="dash-stat-value">{lastWeekLifting}</span>
               <span className="dash-stat-label">lifts</span>
             </div>
-            <div className="dash-stat">
+            <div className="dash-stat" style={{ '--stat-accent': 'var(--success)' } as React.CSSProperties}>
               <span className="dash-stat-value">{summary?.total_activities ?? 0}</span>
               <span className="dash-stat-label">activities (4wk)</span>
             </div>
@@ -189,6 +204,21 @@ export default function DashboardPage() {
           <h3>{weekOffset === 0 ? "This Week" : "Next Week"}</h3>
           <Link to="/plan" className="dash-link">View full plan</Link>
         </div>
+        {weekWorkouts.length > 0 && (
+          <div className="week-summary-bar">
+            {weekPlannedMiles > 0 && (
+              <span className="week-summary-chip" style={{ borderColor: "var(--running)" }}>
+                {weekPlannedMiles.toFixed(1)} mi planned
+              </span>
+            )}
+            <span className="week-summary-chip" style={{ borderColor: "var(--lifting)" }}>
+              {weekLiftCount} lift{weekLiftCount !== 1 ? "s" : ""}
+            </span>
+            <span className="week-summary-chip" style={{ borderColor: "var(--text-muted)" }}>
+              {weekWorkouts.length} total
+            </span>
+          </div>
+        )}
         <div className="week-schedule">
           {weekDates.map(({ dayName, dateStr, dateLabel }) => {
             const dayWorkouts = weekWorkouts.filter((w) => w.scheduled_date === dateStr);
@@ -207,27 +237,22 @@ export default function DashboardPage() {
                     <div
                       key={w.id}
                       className={`week-schedule-workout ${w.completed ? "completed" : ""}`}
-                      style={{ borderLeftColor: SPORT_COLORS[w.sport] || "var(--border)" }}
+                      style={{ borderLeftColor: SPORT_COLORS[w.sport] || "var(--border)", cursor: "pointer" }}
+                      onClick={() => setSelectedWorkout(w)}
                     >
                       <div className="week-schedule-workout-header">
                         <button
                           className={`workout-check ${w.completed ? "checked" : ""}`}
-                          onClick={() => handleToggleComplete(w.id)}
+                          onClick={(e) => { e.stopPropagation(); handleToggleComplete(w.id); }}
                           title={w.completed ? "Mark incomplete" : "Mark complete"}
                         >
                           {w.completed ? "✓" : ""}
                         </button>
-                        <span
-                          className={`week-schedule-title ${w.completed ? "done" : ""}`}
-                          onClick={() => setExpandedWorkout(expandedWorkout === w.id ? null : w.id)}
-                          style={{ cursor: "pointer" }}
-                        >
+                        <span className={`week-schedule-title ${w.completed ? "done" : ""}`}>
                           {w.title}
                         </span>
                       </div>
-                      {expandedWorkout === w.id && (
-                        <div className="week-schedule-desc">{w.description}</div>
-                      )}
+                      <div className="week-schedule-sport">{w.sport}</div>
                     </div>
                   ))
                 )}
@@ -280,6 +305,17 @@ export default function DashboardPage() {
         activityId={selectedActivityId}
         units={user?.units || "imperial"}
         onClose={() => setSelectedActivityId(null)}
+      />
+
+      <WorkoutDetailPanel
+        workout={selectedWorkout}
+        onClose={() => setSelectedWorkout(null)}
+        onUpdate={(updated) => {
+          setSelectedWorkout(updated);
+          setWeekWorkouts((prev) =>
+            prev.map((w) => (w.id === updated.id ? updated : w))
+          );
+        }}
       />
     </div>
   );

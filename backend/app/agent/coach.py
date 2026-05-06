@@ -45,16 +45,20 @@ class ChadCoach:
 
         return response_text
 
-    async def generate_plan(self, user_id: uuid.UUID) -> TrainingPlan:
+    async def generate_plan(self, user_id: uuid.UUID, notes: Optional[str] = None) -> TrainingPlan:
         ctx = await self.context_builder.build(
             user_id, include_plan=False, include_history=False, full_profile=True
         )
         context_text = format_context_for_prompt(ctx)
 
+        prompt = PLAN_GENERATION_PROMPT
+        if notes:
+            prompt += f"\n\nAthlete's specific requests for this plan:\n{notes}"
+
         messages = [
             {
                 "role": "user",
-                "content": f"{context_text}\n\n{PLAN_GENERATION_PROMPT}",
+                "content": f"{context_text}\n\n{prompt}",
             }
         ]
 
@@ -188,7 +192,10 @@ class ChadCoach:
                     text_parts.append(block.text)
                 elif block.type == "tool_use":
                     user_id = self._extract_user_id(messages)
-                    result = await execute_tool(block.name, block.input, user_id, self.db)
+                    try:
+                        result = await execute_tool(block.name, block.input, user_id, self.db)
+                    except Exception as e:
+                        result = f"Error executing {block.name}: {e}"
                     tool_results.append({
                         "type": "tool_result",
                         "tool_use_id": block.id,

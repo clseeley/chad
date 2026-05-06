@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import client from "../api/client";
+import WorkoutDetailPanel from "../components/WorkoutDetailPanel";
 import type { TrainingPlan, PlannedWorkout } from "../types";
 
 const SPORT_COLORS: Record<string, string> = {
@@ -11,10 +12,19 @@ const SPORT_COLORS: Record<string, string> = {
 
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
-function groupByWeek(workouts: PlannedWorkout[]): Record<number, PlannedWorkout[]> {
+function groupByWeek(workouts: PlannedWorkout[], planStart: string): Record<number, PlannedWorkout[]> {
   const weeks: Record<number, PlannedWorkout[]> = {};
+  const start = new Date(planStart + "T00:00:00");
+  const startMonday = new Date(start);
+  startMonday.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+
   for (const w of workouts) {
-    const wk = w.week_number ?? 0;
+    let wk = w.week_number;
+    if (wk == null) {
+      const wDate = new Date(w.scheduled_date + "T00:00:00");
+      const diffDays = Math.floor((wDate.getTime() - startMonday.getTime()) / 86400000);
+      wk = Math.floor(diffDays / 7) + 1;
+    }
     if (!weeks[wk]) weeks[wk] = [];
     weeks[wk].push(w);
   }
@@ -49,8 +59,9 @@ export default function TrainingPlanPage() {
   const [plan, setPlan] = useState<TrainingPlan | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [selectedWorkout, setSelectedWorkout] = useState<PlannedWorkout | null>(null);
   const [rationaleOpen, setRationaleOpen] = useState(false);
+  const [genNotes, setGenNotes] = useState("");
 
   useEffect(() => {
     client
@@ -62,13 +73,23 @@ export default function TrainingPlanPage() {
   const handleGenerate = async () => {
     setGenerating(true);
     try {
-      await client.post("/training/generate");
+      await client.post("/training/generate", { notes: genNotes || undefined });
       const { data } = await client.get("/training/plan");
       setPlan(data);
     } catch {
       alert("Plan generation failed. Make sure you have goals set up.");
     } finally {
       setGenerating(false);
+    }
+  };
+
+  const handleClearPlans = async () => {
+    if (!confirm("Delete all training plans? This cannot be undone.")) return;
+    try {
+      await client.delete("/training/plans");
+      setPlan(null);
+    } catch {
+      alert("Failed to clear plans.");
     }
   };
 
@@ -108,10 +129,18 @@ export default function TrainingPlanPage() {
             No active training plan. Set your goals and let Chad build one for
             you.
           </p>
+          <textarea
+            className="gen-notes-input"
+            placeholder="Optional notes for the coach (e.g. &quot;I want 4 lifts per week&quot;, &quot;No running on Fridays&quot;)"
+            value={genNotes}
+            onChange={(e) => setGenNotes(e.target.value)}
+            rows={3}
+          />
           <button
             onClick={handleGenerate}
             disabled={generating}
             className="btn-primary"
+            style={{ marginTop: "0.75rem" }}
           >
             {generating ? "Generating plan..." : "Generate Training Plan"}
           </button>
@@ -125,7 +154,7 @@ export default function TrainingPlanPage() {
     );
   }
 
-  const weeks = groupByWeek(plan.workouts);
+  const weeks = groupByWeek(plan.workouts, plan.start_date);
   const weekNumbers = Object.keys(weeks)
     .map(Number)
     .sort((a, b) => a - b);
@@ -163,9 +192,7 @@ export default function TrainingPlanPage() {
                             style={{
                               borderLeftColor: SPORT_COLORS[w.sport] || "var(--border)",
                             }}
-                            onClick={() =>
-                              setExpanded(expanded === w.id ? null : w.id)
-                            }
+                            onClick={() => setSelectedWorkout(w)}
                           >
                             <div className="workout-title">
                               <button
@@ -177,11 +204,6 @@ export default function TrainingPlanPage() {
                               </button>
                               {w.title}
                             </div>
-                            {expanded === w.id && (
-                              <div className="workout-detail">
-                                {w.description}
-                              </div>
-                            )}
                           </div>
                         ))
                       )}
@@ -220,6 +242,13 @@ export default function TrainingPlanPage() {
             </div>
           )}
 
+          <textarea
+            className="gen-notes-input gen-notes-sm"
+            placeholder="Notes for regeneration..."
+            value={genNotes}
+            onChange={(e) => setGenNotes(e.target.value)}
+            rows={2}
+          />
           <button
             onClick={handleGenerate}
             disabled={generating}
@@ -228,8 +257,32 @@ export default function TrainingPlanPage() {
           >
             {generating ? "Regenerating..." : "Regenerate Plan"}
           </button>
+          <button
+            onClick={handleClearPlans}
+            className="btn-outline btn-sm"
+            style={{ width: "100%", marginTop: "0.5rem", color: "var(--danger)", borderColor: "var(--danger)" }}
+          >
+            Clear All Plans
+          </button>
         </div>
       </div>
+
+      <WorkoutDetailPanel
+        workout={selectedWorkout}
+        onClose={() => setSelectedWorkout(null)}
+        onUpdate={(updated) => {
+          setSelectedWorkout(updated);
+          setPlan((prev) => {
+            if (!prev) return prev;
+            return {
+              ...prev,
+              workouts: prev.workouts.map((w) =>
+                w.id === updated.id ? updated : w
+              ),
+            };
+          });
+        }}
+      />
     </div>
   );
 }

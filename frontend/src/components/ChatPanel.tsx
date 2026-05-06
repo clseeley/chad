@@ -2,26 +2,39 @@ import { type FormEvent, useEffect, useRef, useState } from "react";
 import client from "../api/client";
 import type { Message } from "../types";
 
-const CHANNEL_ICONS: Record<string, string> = {
-  sms: "SMS",
-  web: "WEB",
-};
+interface ChatPanelProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
 
-export default function ChatPage() {
+export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    client.get("/conversations?limit=100").then(({ data }) => {
-      setMessages(data);
-    });
-  }, []);
+    if (isOpen && !loaded) {
+      client.get("/conversations?limit=100").then(({ data }) => {
+        setMessages(data);
+        setLoaded(true);
+      });
+    }
+  }, [isOpen, loaded]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+    if (isOpen) {
+      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages, isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      inputRef.current?.focus();
+    }
+  }, [isOpen]);
 
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
@@ -70,14 +83,19 @@ export default function ChatPage() {
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <div className="chat-page">
-      <div className="chat-header">
-        <h2>Chat with Chad</h2>
+    <div className="chat-panel">
+      <div className="chat-panel-header">
+        <h3>Chat with Chad</h3>
+        <button className="chat-panel-close" onClick={onClose}>
+          ✕
+        </button>
       </div>
 
-      <div className="chat-messages">
-        {messages.length === 0 && (
+      <div className="chat-panel-messages">
+        {messages.length === 0 && loaded && (
           <div className="chat-empty">
             <p>No messages yet. Say hi to your coach!</p>
           </div>
@@ -89,9 +107,6 @@ export default function ChatPage() {
           >
             <div className="bubble-content">{m.content}</div>
             <div className="bubble-meta">
-              <span className="channel-badge">
-                {CHANNEL_ICONS[m.channel] || m.channel}
-              </span>
               <span>
                 {new Date(m.created_at).toLocaleTimeString([], {
                   hour: "numeric",
@@ -109,8 +124,9 @@ export default function ChatPage() {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={handleSend} className="chat-input">
+      <form onSubmit={handleSend} className="chat-panel-input">
         <input
+          ref={inputRef}
           type="text"
           placeholder="Message Chad..."
           value={input}

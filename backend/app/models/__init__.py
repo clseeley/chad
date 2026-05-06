@@ -5,6 +5,7 @@ from app.models.training_plan import TrainingPlan
 from app.models.workout import PlannedWorkout
 from app.models.activity import Activity
 from app.models.message import Message
+from app.models.athlete_note import AthleteNote
 
 __all__ = [
     "User",
@@ -14,4 +15,5 @@ __all__ = [
     "PlannedWorkout",
     "Activity",
     "Message",
+    "AthleteNote",
 ]

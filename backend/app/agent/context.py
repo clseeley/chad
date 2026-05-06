@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from app.models.activity import Activity
+from app.models.athlete_note import AthleteNote
 from app.models.goal import Goal
 from app.models.message import Message
 from app.models.training_plan import TrainingPlan
@@ -29,6 +30,7 @@ class AthleteContext:
     planned_vs_actual: dict
     fitness_summary: dict
     fitness_profile: Optional[dict]
+    athlete_notes: list
     conversation_history: list
     today: str
     days_to_goal: Optional[int]
@@ -63,6 +65,7 @@ class ContextBuilder:
 
         recent = await self._get_recent_activities(user_id, days=14)
         fitness = self._compute_fitness_summary(recent)
+        notes = await self._get_athlete_notes(user_id)
         conversation: list = []
         if include_history:
             conversation = await self._get_conversation(user_id, conversation_limit)
@@ -86,6 +89,7 @@ class ContextBuilder:
             planned_vs_actual=planned_vs_actual,
             fitness_summary=fitness,
             fitness_profile=fitness_profile,
+            athlete_notes=notes,
             conversation_history=conversation,
             today=today.isoformat(),
             days_to_goal=days_to_goal,
@@ -422,6 +426,22 @@ class ContextBuilder:
             "avg_rest_days_per_week": round(7 - avg_training_days, 1),
         }
 
+    async def _get_athlete_notes(self, user_id: uuid.UUID) -> list:
+        result = await self.db.execute(
+            select(AthleteNote).where(
+                and_(AthleteNote.user_id == user_id, AthleteNote.active == True)
+            ).order_by(AthleteNote.created_at.desc())
+        )
+        return [
+            {
+                "id": str(n.id),
+                "category": n.category,
+                "content": n.content,
+                "created_at": n.created_at.strftime("%Y-%m-%d"),
+            }
+            for n in result.scalars().all()
+        ]
+
     async def _get_conversation(self, user_id: uuid.UUID, limit: int) -> list:
         result = await self.db.execute(
             select(Message).where(Message.user_id == user_id)
@@ -471,6 +491,11 @@ def format_context_for_prompt(ctx: AthleteContext) -> str:
         for w in ctx.this_week_workouts:
             status = "✓" if w["completed"] else "○"
             lines.append(f"  {status} {w['day']} {w['date']}: {w['title']} ({w['sport']})")
+
+    if ctx.athlete_notes:
+        lines.append("\nAthlete Notes:")
+        for n in ctx.athlete_notes:
+            lines.append(f"  [{n['category']}] {n['content']} (id: {n['id']}, {n['created_at']})")
 
     if ctx.planned_vs_actual["planned"] > 0:
         pva = ctx.planned_vs_actual

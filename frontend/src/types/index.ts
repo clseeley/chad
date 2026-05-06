@@ -28,6 +28,14 @@ export interface AuthResponse {
   user: User;
 }
 
+export interface Exercise {
+  name: string;
+  sets: number;
+  reps: number | string;
+  rpe?: number;
+  completed?: boolean;
+}
+
 export interface PlannedWorkout {
   id: string;
   scheduled_date: string;
@@ -35,7 +43,7 @@ export interface PlannedWorkout {
   workout_type: string;
   title: string;
   description: string;
-  target_metrics: Record<string, unknown> | null;
+  target_metrics: { exercises?: Exercise[]; [key: string]: unknown } | null;
   week_number: number | null;
   day_of_week: number | null;
   completed: boolean;
