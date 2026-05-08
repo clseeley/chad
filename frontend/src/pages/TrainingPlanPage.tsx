@@ -1,4 +1,15 @@
 import { useEffect, useState } from "react";
+import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  useDroppable,
+  useDraggable,
+  useSensor,
+  useSensors,
+  type DragStartEvent,
+  type DragEndEvent,
+} from "@dnd-kit/core";
 import client from "../api/client";
 import WorkoutDetailPanel from "../components/WorkoutDetailPanel";
 import type { TrainingPlan, PlannedWorkout } from "../types";
@@ -55,6 +66,85 @@ function isDayToday(planStart: string, weekNum: number, dayIdx: number, todayStr
   return `${y}-${m}-${d}` === todayStr;
 }
 
+function computeDate(planStart: string, weekNum: number, dayIdx: number): string {
+  const start = new Date(planStart + "T00:00:00");
+  const startMonday = new Date(start);
+  startMonday.setDate(start.getDate() - ((start.getDay() + 6) % 7));
+  const target = new Date(startMonday);
+  target.setDate(startMonday.getDate() + (weekNum - 1) * 7 + dayIdx);
+  const y = target.getFullYear();
+  const m = String(target.getMonth() + 1).padStart(2, "0");
+  const d = String(target.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function DayColumn({
+  weekNum,
+  dayIdx,
+  isToday,
+  children,
+}: {
+  weekNum: number;
+  dayIdx: number;
+  isToday: boolean;
+  children: React.ReactNode;
+}) {
+  const { setNodeRef, isOver } = useDroppable({
+    id: `${weekNum}-${dayIdx}`,
+    data: { weekNum, dayIdx },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      className={`week-day ${isToday ? "today" : ""} ${isOver ? "drop-target" : ""}`}
+    >
+      {children}
+    </div>
+  );
+}
+
+function DraggableWorkoutCard({
+  workout,
+  onSelect,
+  onToggle,
+}: {
+  workout: PlannedWorkout;
+  onSelect: (w: PlannedWorkout) => void;
+  onToggle: (id: string, e: React.MouseEvent) => void;
+}) {
+  const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+    id: workout.id,
+    data: { workout },
+  });
+
+  return (
+    <div
+      ref={setNodeRef}
+      {...listeners}
+      {...attributes}
+      className={`workout-card ${workout.completed ? "completed" : ""} ${isDragging ? "dragging" : ""}`}
+      style={{
+        borderLeftColor: SPORT_COLORS[workout.sport] || "var(--border)",
+      }}
+      onClick={() => {
+        if (!isDragging) onSelect(workout);
+      }}
+    >
+      <div className="workout-title">
+        <button
+          className={`workout-check ${workout.completed ? "checked" : ""}`}
+          onClick={(e) => onToggle(workout.id, e)}
+          title={workout.completed ? "Mark incomplete" : "Mark complete"}
+        >
+          {workout.completed ? "✓" : ""}
+        </button>
+        {workout.title}
+      </div>
+    </div>
+  );
+}
+
 export default function TrainingPlanPage() {
   const [plan, setPlan] = useState<TrainingPlan | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,6 +152,11 @@ export default function TrainingPlanPage() {
   const [selectedWorkout, setSelectedWorkout] = useState<PlannedWorkout | null>(null);
   const [rationaleOpen, setRationaleOpen] = useState(false);
   const [genNotes, setGenNotes] = useState("");
+  const [activeWorkout, setActiveWorkout] = useState<PlannedWorkout | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
+  );
 
   useEffect(() => {
     client
@@ -109,6 +204,58 @@ export default function TrainingPlanPage() {
     } catch {
       // ignore
     }
+  };
+
+  const handleDragStart = (event: DragStartEvent) => {
+    setActiveWorkout(event.active.data.current?.workout ?? null);
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    setActiveWorkout(null);
+    if (!plan || !event.over) return;
+
+    const workout = event.active.data.current?.workout as PlannedWorkout | undefined;
+    if (!workout) return;
+
+    const { weekNum, dayIdx } = event.over.data.current as { weekNum: number; dayIdx: number };
+
+    if (workout.week_number === weekNum && workout.day_of_week === dayIdx) return;
+
+    const newDateStr = computeDate(plan.start_date, weekNum, dayIdx);
+    const original = { ...workout };
+
+    setPlan((prev) => {
+      if (!prev) return prev;
+      return {
+        ...prev,
+        workouts: prev.workouts.map((w) =>
+          w.id === workout.id
+            ? { ...w, scheduled_date: newDateStr, day_of_week: dayIdx, week_number: weekNum }
+            : w
+        ),
+      };
+    });
+
+    client
+      .patch(`/training/workouts/${workout.id}/move`, { scheduled_date: newDateStr })
+      .then(({ data }) => {
+        setPlan((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            workouts: prev.workouts.map((w) => (w.id === data.id ? data : w)),
+          };
+        });
+      })
+      .catch(() => {
+        setPlan((prev) => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            workouts: prev.workouts.map((w) => (w.id === original.id ? original : w)),
+          };
+        });
+      });
   };
 
   if (loading) {
@@ -165,55 +312,55 @@ export default function TrainingPlanPage() {
       <h2>{plan.name}</h2>
 
       <div className="plan-layout">
-        <div className="plan-weeks">
-          {weekNumbers.map((wk) => (
-            <div key={wk} className="plan-week">
-              <h3>Week {wk}</h3>
-              <div className="week-grid">
-                {DAYS.map((day, dayIdx) => {
-                  const dayWorkouts = (weeks[wk] || []).filter(
-                    (w) => w.day_of_week === dayIdx
-                  );
-                  const today = isDayToday(plan.start_date, wk, dayIdx, todayStr, plan.workouts);
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+          <div className="plan-weeks">
+            {weekNumbers.map((wk) => (
+              <div key={wk} className="plan-week">
+                <h3>Week {wk}</h3>
+                <div className="week-grid">
+                  {DAYS.map((day, dayIdx) => {
+                    const dayWorkouts = (weeks[wk] || []).filter(
+                      (w) => w.day_of_week === dayIdx
+                    );
+                    const today = isDayToday(plan.start_date, wk, dayIdx, todayStr, plan.workouts);
 
-                  return (
-                    <div key={dayIdx} className={`week-day ${today ? "today" : ""}`}>
-                      <div className="day-label">
-                        {day}
-                        {today && <span className="today-dot" />}
-                      </div>
-                      {dayWorkouts.length === 0 ? (
-                        <div className="day-rest">Rest</div>
-                      ) : (
-                        dayWorkouts.map((w) => (
-                          <div
-                            key={w.id}
-                            className={`workout-card ${w.completed ? "completed" : ""}`}
-                            style={{
-                              borderLeftColor: SPORT_COLORS[w.sport] || "var(--border)",
-                            }}
-                            onClick={() => setSelectedWorkout(w)}
-                          >
-                            <div className="workout-title">
-                              <button
-                                className={`workout-check ${w.completed ? "checked" : ""}`}
-                                onClick={(e) => handleToggleComplete(w.id, e)}
-                                title={w.completed ? "Mark incomplete" : "Mark complete"}
-                              >
-                                {w.completed ? "✓" : ""}
-                              </button>
-                              {w.title}
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  );
-                })}
+                    return (
+                      <DayColumn key={dayIdx} weekNum={wk} dayIdx={dayIdx} isToday={today}>
+                        <div className="day-label">
+                          {day}
+                          {today && <span className="today-dot" />}
+                        </div>
+                        {dayWorkouts.length === 0 ? (
+                          <div className="day-rest">Rest</div>
+                        ) : (
+                          dayWorkouts.map((w) => (
+                            <DraggableWorkoutCard
+                              key={w.id}
+                              workout={w}
+                              onSelect={setSelectedWorkout}
+                              onToggle={handleToggleComplete}
+                            />
+                          ))
+                        )}
+                      </DayColumn>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+
+          <DragOverlay>
+            {activeWorkout && (
+              <div
+                className="workout-card drag-preview"
+                style={{ borderLeftColor: SPORT_COLORS[activeWorkout.sport] || "var(--border)" }}
+              >
+                <div className="workout-title">{activeWorkout.title}</div>
+              </div>
+            )}
+          </DragOverlay>
+        </DndContext>
 
         <div className="plan-sidebar">
           <div className="sidebar-card">

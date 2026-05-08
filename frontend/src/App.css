@@ -1170,6 +1170,23 @@ body {
   text-decoration-color: var(--text-muted);
 }
 
+.week-day.drop-target {
+  background: rgba(252, 76, 2, 0.08);
+  border-radius: 8px;
+  outline: 2px dashed var(--primary);
+  outline-offset: -2px;
+}
+
+.workout-card.drag-preview {
+  box-shadow: var(--shadow-md);
+  transform: rotate(2deg);
+  opacity: 0.95;
+}
+
+.workout-card.dragging {
+  opacity: 0.3;
+}
+
 .workout-title {
   display: flex;
   align-items: flex-start;

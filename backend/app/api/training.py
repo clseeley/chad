@@ -186,6 +186,59 @@ async def toggle_exercise_complete(
     }
 
 
+class MoveWorkoutRequest(BaseModel):
+    scheduled_date: date
+
+
+@router.patch("/workouts/{workout_id}/move")
+async def move_workout(
+    workout_id: str,
+    body: MoveWorkoutRequest,
+    user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    try:
+        wid = uuid.UUID(workout_id)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid workout ID")
+
+    result = await db.execute(
+        select(PlannedWorkout).where(
+            and_(PlannedWorkout.id == wid, PlannedWorkout.user_id == user.id)
+        )
+    )
+    workout = result.scalar_one_or_none()
+    if not workout:
+        raise HTTPException(status_code=404, detail="Workout not found")
+
+    plan_result = await db.execute(
+        select(TrainingPlan).where(TrainingPlan.id == workout.training_plan_id)
+    )
+    plan = plan_result.scalar_one()
+    plan_monday = plan.start_date - timedelta(days=plan.start_date.weekday())
+
+    new_date = body.scheduled_date
+    workout.scheduled_date = new_date
+    workout.day_of_week = new_date.weekday()
+    workout.week_number = ((new_date - plan_monday).days // 7) + 1
+
+    await db.commit()
+
+    return WorkoutResponse(
+        id=str(workout.id),
+        scheduled_date=workout.scheduled_date,
+        sport=workout.sport,
+        workout_type=workout.workout_type,
+        title=workout.title,
+        description=workout.description,
+        target_metrics=workout.target_metrics,
+        week_number=workout.week_number,
+        day_of_week=workout.day_of_week,
+        completed=workout.completed,
+        matched_activity_id=str(workout.matched_activity_id) if workout.matched_activity_id else None,
+    )
+
+
 @router.delete("/plans")
 async def delete_all_plans(
     user: User = Depends(get_current_user),

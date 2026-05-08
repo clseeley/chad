@@ -106,7 +106,7 @@ Then, output the training plan as JSON inside <plan_json> tags with this exact s
           "workout_type": "upper_body",
           "title": "Upper Body A",
           "description": "Bench Press 4x6 @RPE 7, Barbell Row 4x8 @RPE 7, OHP 3x8 @RPE 7, Pull-ups 3xAMRAP, Face Pulls 3x15",
-          "target_metrics": {"exercises": [{"name": "Bench Press", "sets": 4, "reps": 6, "rpe": 7}]}
+          "target_metrics": {"exercises": [{"name": "Bench Press", "sets": 4, "reps": 6, "rpe": 7}, {"name": "Barbell Row", "sets": 4, "reps": 8, "rpe": 7}, {"name": "OHP", "sets": 3, "reps": 8, "rpe": 7}, {"name": "Pull-ups", "sets": 3, "reps": "AMRAP"}, {"name": "Face Pulls", "sets": 3, "reps": 15}]}
         }
       ]
     }
@@ -119,6 +119,8 @@ workout_type for running: "easy_run", "tempo", "intervals", "long_run", "recover
 workout_type for lifting: "upper_body", "lower_body", "full_body"
 workout_type for cross_training: "mobility", "yoga", "swim", "bike"
 workout_type for rest: "rest"
+
+For lifting workouts, target_metrics.exercises MUST list every exercise with name, sets, reps, and optional rpe. Do not abbreviate or truncate this array.
 
 Constraints:
 - start_date MUST be the Monday of the current week (the Monday on or before today's date)
