@@ -10,6 +10,15 @@ import {
   type DragStartEvent,
   type DragEndEvent,
 } from "@dnd-kit/core";
+import {
+  Check,
+  GripVertical,
+  RefreshCw,
+  Trash2,
+  ChevronDown,
+  Sparkles,
+  ClipboardList,
+} from "lucide-react";
 import client from "../api/client";
 import WorkoutDetailPanel from "../components/WorkoutDetailPanel";
 import type { TrainingPlan, PlannedWorkout } from "../types";
@@ -137,7 +146,7 @@ function DraggableWorkoutCard({
           onClick={(e) => onToggle(workout.id, e)}
           title={workout.completed ? "Mark incomplete" : "Mark complete"}
         >
-          {workout.completed ? "✓" : ""}
+          {workout.completed ? <Check size={10} /> : ""}
         </button>
         {workout.title}
       </div>
@@ -262,7 +271,13 @@ export default function TrainingPlanPage() {
     return (
       <div className="page">
         <h2>Training Plan</h2>
-        <p className="muted">Loading...</p>
+        <div className="card skeleton-card">
+          <div className="skeleton-line wide" />
+          <div className="skeleton-line" />
+          <div className="skeleton-line short" />
+          <div className="skeleton-line" />
+          <div className="skeleton-line short" />
+        </div>
       </div>
     );
   }
@@ -271,14 +286,13 @@ export default function TrainingPlanPage() {
     return (
       <div className="page">
         <h2>Training Plan</h2>
-        <div className="card" style={{ textAlign: "center", padding: "3rem" }}>
-          <p style={{ marginBottom: "1rem" }}>
-            No active training plan. Set your goals and let Chad build one for
-            you.
-          </p>
+        <div className="card empty-state-card">
+          <ClipboardList size={40} className="empty-state-icon" />
+          <h3>No active training plan</h3>
+          <p className="muted">Set your goals and let Chad build one for you.</p>
           <textarea
             className="gen-notes-input"
-            placeholder="Optional notes for the coach (e.g. &quot;I want 4 lifts per week&quot;, &quot;No running on Fridays&quot;)"
+            placeholder='Optional notes for the coach (e.g. "I want 4 lifts per week", "No running on Fridays")'
             value={genNotes}
             onChange={(e) => setGenNotes(e.target.value)}
             rows={3}
@@ -289,6 +303,7 @@ export default function TrainingPlanPage() {
             className="btn-primary"
             style={{ marginTop: "0.75rem" }}
           >
+            <Sparkles size={16} />
             {generating ? "Generating plan..." : "Generate Training Plan"}
           </button>
           {generating && (
@@ -356,7 +371,10 @@ export default function TrainingPlanPage() {
                 className="workout-card drag-preview"
                 style={{ borderLeftColor: SPORT_COLORS[activeWorkout.sport] || "var(--border)" }}
               >
-                <div className="workout-title">{activeWorkout.title}</div>
+                <div className="workout-title">
+                  <GripVertical size={12} className="muted" />
+                  {activeWorkout.title}
+                </div>
               </div>
             )}
           </DragOverlay>
@@ -381,7 +399,10 @@ export default function TrainingPlanPage() {
                 onClick={() => setRationaleOpen(!rationaleOpen)}
               >
                 <span>Coach's Notes</span>
-                <span className={`rationale-chevron ${rationaleOpen ? "open" : ""}`}>&#9662;</span>
+                <ChevronDown
+                  size={16}
+                  className={`rationale-chevron ${rationaleOpen ? "open" : ""}`}
+                />
               </button>
               {rationaleOpen && (
                 <div className="rationale-body">{plan.rationale}</div>
@@ -402,13 +423,15 @@ export default function TrainingPlanPage() {
             className="btn-outline btn-sm"
             style={{ width: "100%" }}
           >
+            <RefreshCw size={14} />
             {generating ? "Regenerating..." : "Regenerate Plan"}
           </button>
           <button
             onClick={handleClearPlans}
-            className="btn-outline btn-sm"
-            style={{ width: "100%", marginTop: "0.5rem", color: "var(--danger)", borderColor: "var(--danger)" }}
+            className="btn-outline btn-sm btn-danger"
+            style={{ width: "100%", marginTop: "0.5rem" }}
           >
+            <Trash2 size={14} />
             Clear All Plans
           </button>
         </div>

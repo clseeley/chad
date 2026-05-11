@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
+import { RefreshCw, Activity } from "lucide-react";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import ActivityDetailPanel from "../components/ActivityDetailPanel";
 
-interface Activity {
+interface ActivityItem {
   id: string;
   strava_id: number;
   sport_type: string;
@@ -64,7 +65,7 @@ const SPORT_COLORS: Record<string, string> = {
 
 export default function ActivityHistoryPage() {
   const { user } = useAuth();
-  const [activities, setActivities] = useState<Activity[]>([]);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [filter, setFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
   const [selectedActivityId, setSelectedActivityId] = useState<string | null>(null);
@@ -95,6 +96,7 @@ export default function ActivityHistoryPage() {
       <div className="page-header">
         <h2>Activities</h2>
         <button onClick={handleSync} className="btn-outline btn-sm">
+          <RefreshCw size={14} />
           Sync Strava
         </button>
       </div>
@@ -112,11 +114,18 @@ export default function ActivityHistoryPage() {
       </div>
 
       {loading ? (
-        <p className="muted">Loading activities...</p>
+        <div className="activity-list">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="activity-row skeleton-card">
+              <div className="skeleton-line short" style={{ marginBottom: 0 }} />
+            </div>
+          ))}
+        </div>
       ) : activities.length === 0 ? (
-        <p className="muted">
-          No activities yet. Connect Strava in Settings to sync your workouts.
-        </p>
+        <div className="empty-state">
+          <Activity size={32} />
+          <p>No activities yet. Connect Strava in Settings to sync your workouts.</p>
+        </div>
       ) : (
         <div className="activity-list">
           {activities.map((a) => (

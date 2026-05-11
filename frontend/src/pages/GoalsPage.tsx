@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
+import { Plus, Trash2, Target, X } from "lucide-react";
 import client from "../api/client";
 import type { Goal } from "../types";
 
@@ -45,7 +46,7 @@ export default function GoalsPage() {
       <div className="page-header">
         <h2>Goals</h2>
         <button onClick={() => setShowForm(!showForm)} className="btn-primary">
-          {showForm ? "Cancel" : "Add Goal"}
+          {showForm ? <><X size={16} /> Cancel</> : <><Plus size={16} /> Add Goal</>}
         </button>
       </div>
 
@@ -91,20 +92,11 @@ export default function GoalsPage() {
             <label>
               Description (optional)
               <textarea
+                className="form-textarea"
                 placeholder="Any details about this goal..."
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 rows={3}
-                style={{
-                  background: "var(--bg)",
-                  border: "1px solid var(--border)",
-                  borderRadius: "8px",
-                  padding: "0.625rem 0.75rem",
-                  color: "var(--text)",
-                  fontSize: "0.925rem",
-                  resize: "vertical",
-                  fontFamily: "inherit",
-                }}
               />
             </label>
             <button type="submit" className="btn-primary">
@@ -115,9 +107,10 @@ export default function GoalsPage() {
       )}
 
       {goals.length === 0 ? (
-        <p className="muted">
-          No goals yet. Add a goal to help Chad create your training plan.
-        </p>
+        <div className="empty-state">
+          <Target size={32} />
+          <p>No goals yet. Add a goal to help Chad create your training plan.</p>
+        </div>
       ) : (
         <div className="goals-list">
           {goals.map((g) => (
@@ -133,9 +126,9 @@ export default function GoalsPage() {
                 </div>
                 <button
                   onClick={() => handleDelete(g.id)}
-                  className="btn-outline btn-sm"
-                  style={{ color: "var(--danger)", borderColor: "var(--danger)" }}
+                  className="btn-outline btn-sm btn-danger"
                 >
+                  <Trash2 size={14} />
                   Delete
                 </button>
               </div>

@@ -1,5 +1,6 @@
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { Activity, Brain, Smartphone } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 
 export default function RegisterPage() {
@@ -61,15 +62,15 @@ export default function RegisterPage() {
         <div className="auth-divider" />
         <div className="auth-features">
           <div className="auth-feature">
-            <div className="auth-feature-icon">&#x1F3C3;</div>
+            <div className="auth-feature-icon"><Activity size={20} /></div>
             <div className="auth-feature-label">Strava sync</div>
           </div>
           <div className="auth-feature">
-            <div className="auth-feature-icon">&#x1F9E0;</div>
+            <div className="auth-feature-icon"><Brain size={20} /></div>
             <div className="auth-feature-label">AI plans</div>
           </div>
           <div className="auth-feature">
-            <div className="auth-feature-icon">&#x1F4F1;</div>
+            <div className="auth-feature-icon"><Smartphone size={20} /></div>
             <div className="auth-feature-label">SMS coaching</div>
           </div>
         </div>

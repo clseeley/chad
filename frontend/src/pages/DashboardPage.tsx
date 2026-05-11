@@ -1,6 +1,16 @@
 import type React from "react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import {
+  Check,
+  ChevronRight,
+  Footprints,
+  Dumbbell,
+  TrendingUp,
+  Calendar,
+  Zap,
+  Activity as ActivityIcon,
+} from "lucide-react";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import ActivityDetailPanel from "../components/ActivityDetailPanel";
@@ -11,6 +21,12 @@ const SPORT_COLORS: Record<string, string> = {
   running: "var(--running)",
   lifting: "var(--lifting)",
   cross_training: "var(--cross)",
+};
+
+const SPORT_ICONS: Record<string, React.ReactNode> = {
+  running: <Footprints size={14} />,
+  lifting: <Dumbbell size={14} />,
+  cross_training: <Zap size={14} />,
 };
 
 interface Activity {
@@ -140,8 +156,11 @@ export default function DashboardPage() {
       <h2>Welcome back{user?.first_name ? `, ${user.first_name}` : ""}</h2>
 
       <div className="dashboard-grid">
-        <div className="card">
-          <h3>Today's Workout</h3>
+        <div className="card card-today">
+          <h3>
+            <Calendar size={16} className="card-title-icon" />
+            Today's Workout
+          </h3>
           {todayWorkouts.length === 0 && weekOffset === 0 ? (
             <p className="muted">Rest day — no workouts scheduled.</p>
           ) : todayWorkouts.length === 0 && weekOffset > 0 ? (
@@ -159,7 +178,7 @@ export default function DashboardPage() {
                   onClick={(e) => { e.stopPropagation(); handleToggleComplete(w.id); }}
                   title={w.completed ? "Mark incomplete" : "Mark complete"}
                 >
-                  {w.completed ? "✓" : ""}
+                  {w.completed ? <Check size={12} /> : ""}
                 </button>
                 <div style={{ flex: 1 }}>
                   <div className={`dash-workout-title ${w.completed ? "done" : ""}`}>
@@ -167,6 +186,7 @@ export default function DashboardPage() {
                   </div>
                   <div className="dash-workout-desc">{w.description}</div>
                 </div>
+                <ChevronRight size={16} className="muted" />
               </div>
             ))
           )}
@@ -181,17 +201,23 @@ export default function DashboardPage() {
         </div>
 
         <div className="card">
-          <h3>Quick Stats <span className="muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>(last week)</span></h3>
+          <h3>
+            <TrendingUp size={16} className="card-title-icon" />
+            Quick Stats <span className="muted" style={{ fontWeight: 400, fontSize: '0.8rem' }}>(last week)</span>
+          </h3>
           <div className="dash-stats">
             <div className="dash-stat" style={{ '--stat-accent': 'var(--running)' } as React.CSSProperties}>
+              <Footprints size={18} className="dash-stat-icon" style={{ color: 'var(--running)' }} />
               <span className="dash-stat-value">{lastWeekDist.toFixed(1)}</span>
               <span className="dash-stat-label">{summary?.units ?? "km"} run</span>
             </div>
             <div className="dash-stat" style={{ '--stat-accent': 'var(--lifting)' } as React.CSSProperties}>
+              <Dumbbell size={18} className="dash-stat-icon" style={{ color: 'var(--lifting)' }} />
               <span className="dash-stat-value">{lastWeekLifting}</span>
               <span className="dash-stat-label">lifts</span>
             </div>
             <div className="dash-stat" style={{ '--stat-accent': 'var(--success)' } as React.CSSProperties}>
+              <TrendingUp size={18} className="dash-stat-icon" style={{ color: 'var(--success)' }} />
               <span className="dash-stat-value">{summary?.total_activities ?? 0}</span>
               <span className="dash-stat-label">activities (4wk)</span>
             </div>
@@ -202,17 +228,17 @@ export default function DashboardPage() {
       <div className="dash-this-week">
         <div className="dash-recent-header">
           <h3>{weekOffset === 0 ? "This Week" : "Next Week"}</h3>
-          <Link to="/plan" className="dash-link">View full plan</Link>
+          <Link to="/plan" className="dash-link">View full plan <ChevronRight size={14} /></Link>
         </div>
         {weekWorkouts.length > 0 && (
           <div className="week-summary-bar">
             {weekPlannedMiles > 0 && (
               <span className="week-summary-chip" style={{ borderColor: "var(--running)" }}>
-                {weekPlannedMiles.toFixed(1)} mi planned
+                <Footprints size={12} /> {weekPlannedMiles.toFixed(1)} mi planned
               </span>
             )}
             <span className="week-summary-chip" style={{ borderColor: "var(--lifting)" }}>
-              {weekLiftCount} lift{weekLiftCount !== 1 ? "s" : ""}
+              <Dumbbell size={12} /> {weekLiftCount} lift{weekLiftCount !== 1 ? "s" : ""}
             </span>
             <span className="week-summary-chip" style={{ borderColor: "var(--text-muted)" }}>
               {weekWorkouts.length} total
@@ -246,13 +272,15 @@ export default function DashboardPage() {
                           onClick={(e) => { e.stopPropagation(); handleToggleComplete(w.id); }}
                           title={w.completed ? "Mark incomplete" : "Mark complete"}
                         >
-                          {w.completed ? "✓" : ""}
+                          {w.completed ? <Check size={10} /> : ""}
                         </button>
                         <span className={`week-schedule-title ${w.completed ? "done" : ""}`}>
                           {w.title}
                         </span>
                       </div>
-                      <div className="week-schedule-sport">{w.sport}</div>
+                      <div className="week-schedule-sport">
+                        {SPORT_ICONS[w.sport]} {w.sport}
+                      </div>
                     </div>
                   ))
                 )}
@@ -265,10 +293,13 @@ export default function DashboardPage() {
       <div className="dash-recent">
         <div className="dash-recent-header">
           <h3>Recent Activities</h3>
-          <Link to="/activities" className="dash-link">View all</Link>
+          <Link to="/activities" className="dash-link">View all <ChevronRight size={14} /></Link>
         </div>
         {activities.length === 0 ? (
-          <p className="muted">No activities yet. Connect Strava in <Link to="/settings" style={{ color: "var(--primary)" }}>Settings</Link>.</p>
+          <div className="empty-state">
+            <ActivityIcon size={32} />
+            <p>No activities yet. Connect Strava in <Link to="/settings" style={{ color: "var(--primary)" }}>Settings</Link>.</p>
+          </div>
         ) : (
           <div className="activity-list">
             {activities.map((a) => (

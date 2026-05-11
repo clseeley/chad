@@ -1,3 +1,4 @@
+import { X, Check, Circle, CheckCircle2 } from "lucide-react";
 import client from "../api/client";
 import type { Exercise, PlannedWorkout } from "../types";
 
@@ -75,7 +76,7 @@ export default function WorkoutDetailPanel({
         <div className="detail-panel-header">
           <h3>{workout.title}</h3>
           <button className="detail-close" onClick={onClose}>
-            &times;
+            <X size={18} />
           </button>
         </div>
 
@@ -110,8 +111,8 @@ export default function WorkoutDetailPanel({
                   className={`exercise-card ${ex.completed ? "completed" : ""}`}
                   onClick={() => handleToggleExercise(i)}
                 >
-                  <span className={`workout-check ${ex.completed ? "checked" : ""}`}>
-                    {ex.completed ? "✓" : ""}
+                  <span className="exercise-check-icon">
+                    {ex.completed ? <CheckCircle2 size={18} /> : <Circle size={18} />}
                   </span>
                   <div className="exercise-info">
                     <span className={`exercise-name ${ex.completed ? "done" : ""}`}>
@@ -131,7 +132,11 @@ export default function WorkoutDetailPanel({
             className={`btn-workout-complete ${workout.completed ? "completed" : ""}`}
             onClick={handleToggleWorkout}
           >
-            {workout.completed ? "Mark Incomplete" : "Complete Workout"}
+            {workout.completed ? (
+              <>Mark Incomplete</>
+            ) : (
+              <><Check size={16} /> Complete Workout</>
+            )}
           </button>
         </div>
       </div>

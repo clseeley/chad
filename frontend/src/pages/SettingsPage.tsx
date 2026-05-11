@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useState } from "react";
+import { Save, CheckCircle2 } from "lucide-react";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import StravaConnectButton from "../components/StravaConnectButton";
@@ -93,7 +94,7 @@ export default function SettingsPage() {
           </label>
 
           <button type="submit" className="btn-primary">
-            {saved ? "Saved" : "Save Changes"}
+            {saved ? <><CheckCircle2 size={16} /> Saved</> : <><Save size={16} /> Save Changes</>}
           </button>
         </form>
       </div>

@@ -1,4 +1,5 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
+import { X, Send } from "lucide-react";
 import client from "../api/client";
 import type { Message } from "../types";
 
@@ -90,7 +91,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
       <div className="chat-panel-header">
         <h3>Chat with Chad</h3>
         <button className="chat-panel-close" onClick={onClose}>
-          ✕
+          <X size={16} />
         </button>
       </div>
 
@@ -134,7 +135,7 @@ export default function ChatPanel({ isOpen, onClose }: ChatPanelProps) {
           disabled={sending}
         />
         <button type="submit" disabled={sending || !input.trim()}>
-          Send
+          <Send size={16} />
         </button>
       </form>
     </div>

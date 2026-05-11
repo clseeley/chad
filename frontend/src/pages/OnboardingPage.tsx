@@ -1,5 +1,6 @@
 import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { Check, Plus, Sparkles, ArrowRight } from "lucide-react";
 import client from "../api/client";
 import { useAuth } from "../auth/AuthContext";
 import StravaConnectButton from "../components/StravaConnectButton";
@@ -13,13 +14,11 @@ export default function OnboardingPage() {
   const [step, setStep] = useState<Step>("profile");
   const [stravaConnected, setStravaConnected] = useState(false);
 
-  // Profile fields
   const [firstName, setFirstName] = useState(user?.first_name || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [timezone, setTimezone] = useState(user?.timezone || "America/New_York");
   const [units, setUnits] = useState(user?.units || "imperial");
 
-  // Goal fields
   const [goalTitle, setGoalTitle] = useState("");
   const [goalType, setGoalType] = useState("fitness");
   const [goalSport, setGoalSport] = useState("");
@@ -27,7 +26,6 @@ export default function OnboardingPage() {
   const [goalDescription, setGoalDescription] = useState("");
   const [goals, setGoals] = useState<{ id: string; title: string }[]>([]);
 
-  // Plan generation
   const [generating, setGenerating] = useState(false);
   const [planReady, setPlanReady] = useState(false);
   const [planRationale, setPlanRationale] = useState<string | null>(null);
@@ -131,7 +129,7 @@ export default function OnboardingPage() {
     <div className="onboarding-page">
       <div className="onboarding-container">
         <div className="onboarding-header">
-          <h1>Welcome to Chad</h1>
+          <h1>Welcome to <span className="brand-gradient">Chad</span></h1>
           <p className="muted">Let's set up your AI coaching in a few steps.</p>
         </div>
 
@@ -141,7 +139,7 @@ export default function OnboardingPage() {
               key={label}
               className={`progress-step ${i <= stepIndex ? "active" : ""} ${i < stepIndex ? "done" : ""}`}
             >
-              <div className="step-dot">{i < stepIndex ? "✓" : i + 1}</div>
+              <div className="step-dot">{i < stepIndex ? <Check size={14} /> : i + 1}</div>
               <span className="step-label">{label}</span>
             </div>
           ))}
@@ -187,7 +185,7 @@ export default function OnboardingPage() {
                   <option value="metric">Metric (km, kg)</option>
                 </select>
               </label>
-              <button type="submit" className="btn-primary">Continue</button>
+              <button type="submit" className="btn-primary">Continue <ArrowRight size={16} /></button>
             </form>
           </div>
         )}
@@ -214,7 +212,7 @@ export default function OnboardingPage() {
                 disabled={!stravaConnected || syncing}
                 className="btn-primary"
               >
-                Continue
+                Continue <ArrowRight size={16} />
               </button>
             </div>
           </div>
@@ -275,24 +273,15 @@ export default function OnboardingPage() {
               <label>
                 Description (optional)
                 <textarea
+                  className="form-textarea"
                   value={goalDescription}
                   onChange={(e) => setGoalDescription(e.target.value)}
                   placeholder="Any extra details..."
                   rows={2}
-                  style={{
-                    background: "var(--bg)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                    padding: "0.625rem 0.75rem",
-                    color: "var(--text)",
-                    fontSize: "0.925rem",
-                    resize: "vertical",
-                    fontFamily: "inherit",
-                  }}
                 />
               </label>
               <button type="submit" className="btn-outline">
-                + Add Goal
+                <Plus size={16} /> Add Goal
               </button>
             </form>
 
@@ -302,7 +291,7 @@ export default function OnboardingPage() {
                 disabled={goals.length === 0 && !goalTitle.trim()}
                 className="btn-primary"
               >
-                Continue
+                Continue <ArrowRight size={16} />
               </button>
             </div>
           </div>
@@ -324,6 +313,7 @@ export default function OnboardingPage() {
                   className="btn-primary"
                   style={{ fontSize: "1.1rem", padding: "0.875rem 2rem" }}
                 >
+                  <Sparkles size={18} />
                   {generating ? "Generating..." : "Generate My Plan"}
                 </button>
                 {generating && (
@@ -346,7 +336,7 @@ export default function OnboardingPage() {
                   </div>
                 )}
                 <button onClick={handleFinish} className="btn-primary" style={{ fontSize: "1.1rem", padding: "0.875rem 2rem" }}>
-                  Go to Dashboard
+                  Go to Dashboard <ArrowRight size={18} />
                 </button>
               </>
             )}
