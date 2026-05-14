@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../auth/AuthContext";
 import ChatPanel from "./ChatPanel";
+import ChatFab from "./ChatFab";
 
 export default function Layout() {
   const { user, logout } = useAuth();
@@ -70,6 +71,7 @@ export default function Layout() {
       <main className="content">
         <Outlet />
       </main>
+      <ChatFab visible={!chatOpen} onClick={() => setChatOpen(true)} />
     </div>
   );
 }

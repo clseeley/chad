@@ -78,6 +78,20 @@ COACH_TOOLS = [
         },
     },
     {
+        "name": "get_activity_detail",
+        "description": "Get detailed data for a specific activity, including per-mile splits and laps with pace and heart rate. Use when the athlete asks about pacing, splits, or effort breakdown for a particular activity.",
+        "input_schema": {
+            "type": "object",
+            "properties": {
+                "activity_id": {
+                    "type": "string",
+                    "description": "UUID of the activity to retrieve details for",
+                },
+            },
+            "required": ["activity_id"],
+        },
+    },
+    {
         "name": "add_athlete_note",
         "description": "Save a note about the athlete — injury, fatigue level, preference, or general context. Use when the athlete shares how they're feeling or reports an issue.",
         "input_schema": {
@@ -180,6 +194,7 @@ _REQUIRED_FIELDS: dict[str, list[str]] = {
     "add_workout": ["date", "sport", "workout_type", "title", "description"],
     "mark_workout_complete": ["date"],
     "remove_workout": ["date"],
+    "get_activity_detail": ["activity_id"],
 }
 
 
@@ -206,6 +221,8 @@ async def execute_tool(
     elif tool_name == "get_recent_activities":
         days = tool_input.get("days", 7)
         return await _get_recent_activities(user_id, db, days)
+    elif tool_name == "get_activity_detail":
+        return await _get_activity_detail(user_id, db, tool_input["activity_id"])
     elif tool_name == "add_athlete_note":
         return await _add_athlete_note(user_id, db, tool_input["category"], tool_input["content"])
     elif tool_name == "get_athlete_notes":
@@ -342,7 +359,76 @@ async def _get_recent_activities(user_id: uuid.UUID, db: AsyncSession, days: int
         time_str = f"{a.moving_time // 60}m" if a.moving_time else ""
         hr = f"avg HR {a.average_heartrate:.0f}" if a.average_heartrate else ""
         parts = [p for p in [dist, time_str, hr] if p]
-        lines.append(f"{a.start_date.strftime('%a %m/%d')}: {a.name or a.sport_type} — {', '.join(parts)}")
+        has_splits = " [has splits]" if a.splits_json else ""
+        lines.append(f"{a.start_date.strftime('%a %m/%d')}: {a.name or a.sport_type} — {', '.join(parts)}{has_splits} (id: {a.id})")
+    return "\n".join(lines)
+
+
+async def _get_activity_detail(user_id: uuid.UUID, db: AsyncSession, activity_id: str) -> str:
+    try:
+        aid = uuid.UUID(activity_id)
+    except ValueError:
+        return "Invalid activity ID."
+
+    result = await db.execute(
+        select(Activity).where(
+            and_(Activity.id == aid, Activity.user_id == user_id)
+        )
+    )
+    a = result.scalar_one_or_none()
+    if not a:
+        return "Activity not found."
+
+    lines = [f"{a.name or a.sport_type} — {a.start_date.strftime('%a %m/%d %Y')}"]
+
+    if a.distance:
+        lines.append(f"Distance: {a.distance / 1609.34:.2f} mi")
+    if a.moving_time:
+        mins = a.moving_time // 60
+        secs = a.moving_time % 60
+        lines.append(f"Moving time: {mins}m {secs}s")
+    if a.average_speed and a.distance and a.distance > 0:
+        pace_sec = 1609.34 / a.average_speed
+        lines.append(f"Avg pace: {int(pace_sec // 60)}:{int(pace_sec % 60):02d}/mi")
+    if a.average_heartrate:
+        lines.append(f"Avg HR: {a.average_heartrate:.0f} bpm")
+    if a.max_heartrate:
+        lines.append(f"Max HR: {a.max_heartrate:.0f} bpm")
+    if a.total_elevation_gain:
+        lines.append(f"Elevation gain: {a.total_elevation_gain:.0f} m")
+
+    if a.splits_json and isinstance(a.splits_json, list):
+        lines.append("\nSplits:")
+        for s in a.splits_json:
+            split_num = s.get("split", "?")
+            dist_m = s.get("distance", 0)
+            dist_mi = dist_m / 1609.34
+            time_sec = s.get("moving_time", 0)
+            pace = time_sec / dist_mi if dist_mi > 0 else 0
+            pace_str = f"{int(pace // 60)}:{int(pace % 60):02d}/mi" if pace > 0 else "N/A"
+            hr = s.get("average_heartrate")
+            elev = s.get("elevation_difference")
+            parts = [f"Split {split_num}: {dist_mi:.2f} mi, {pace_str}"]
+            if hr:
+                parts.append(f"HR {hr:.0f}")
+            if elev and abs(elev) > 1:
+                parts.append(f"elev {'+' if elev > 0 else ''}{elev:.0f}m")
+            lines.append(f"  {' | '.join(parts)}")
+
+    if a.laps_json and isinstance(a.laps_json, list) and len(a.laps_json) > 1:
+        lines.append("\nLaps:")
+        for lap in a.laps_json:
+            lap_name = lap.get("name", f"Lap {lap.get('lap_index', '?')}")
+            dist = lap.get("distance", 0) / 1609.34
+            time_sec = lap.get("moving_time", 0)
+            pace = time_sec / dist if dist > 0 else 0
+            pace_str = f"{int(pace // 60)}:{int(pace % 60):02d}/mi" if pace > 0 else "N/A"
+            hr = lap.get("average_heartrate")
+            parts = [f"{lap_name}: {dist:.2f} mi, {time_sec // 60}m{time_sec % 60:02d}s ({pace_str})"]
+            if hr:
+                parts.append(f"HR {hr:.0f}")
+            lines.append(f"  {' | '.join(parts)}")
+
     return "\n".join(lines)
 
 

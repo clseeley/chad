@@ -1166,6 +1166,35 @@ body {
   cursor: not-allowed;
 }
 
+/* ========== CHAT FAB ========== */
+.chat-fab {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(252, 76, 2, 0.35);
+  z-index: 50;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.chat-fab:hover {
+  transform: scale(1.08);
+  box-shadow: 0 6px 20px rgba(252, 76, 2, 0.45);
+}
+
+.chat-fab:active {
+  transform: scale(0.95);
+}
+
 /* ========== TRAINING PLAN ========== */
 .plan-meta {
   display: flex;
@@ -1640,6 +1669,12 @@ body {
   color: var(--text-dim);
 }
 
+.week-schedule-day.drop-target {
+  background: rgba(252, 76, 2, 0.06);
+  outline: 2px dashed var(--primary);
+  outline-offset: -2px;
+}
+
 .week-schedule-rest {
   font-size: 0.75rem;
   color: var(--text-dim);
@@ -1656,6 +1691,17 @@ body {
 
 .week-schedule-workout.completed {
   opacity: 0.5;
+}
+
+.week-schedule-workout.dragging {
+  opacity: 0.25;
+}
+
+.week-schedule-workout.drag-preview {
+  box-shadow: var(--shadow-lg);
+  transform: rotate(2deg);
+  opacity: 0.95;
+  background: var(--bg);
 }
 
 .week-schedule-workout-header {

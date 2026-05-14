@@ -181,6 +181,9 @@ class ContextBuilder:
             if a.average_speed and a.distance and a.distance > 0:
                 pace_sec = 1609.34 / a.average_speed
                 entry["pace_per_mi"] = f"{int(pace_sec // 60)}:{int(pace_sec % 60):02d}"
+            if a.splits_json:
+                entry["has_splits"] = True
+                entry["activity_id"] = str(a.id)
             activities.append(entry)
         return activities
 
@@ -516,6 +519,8 @@ def format_context_for_prompt(ctx: AthleteContext) -> str:
             if a.get("avg_hr"):
                 parts.append(f"HR {a['avg_hr']}")
             lines.append(f"  {a['date']}: {' — '.join(parts)}")
+            if a.get("has_splits"):
+                lines[-1] += f" [splits available, id={a['activity_id']}]"
 
         fs = ctx.fitness_summary
         lines.append(f"\nFitness Summary (14d): {fs['last_14d_running_miles']} mi running, {fs['last_14d_lifting_sessions']} lifting sessions, {fs['total_activities_14d']} total activities")
